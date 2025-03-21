@@ -1,0 +1,23 @@
+# Simple Metrology Annotations
+
+## Points
+Point 0: (447.95, 835.59) - reference
+Point 1: (438.55, 272.81) - reference
+Point 2: (942.73, 569.39) - measure
+Point 3: (962.99, 207.71) - measure
+Point 4: (259.16, 611.35) - parallel_1
+Point 5: (293.16, 946.26) - parallel_1
+Point 6: (716.32, 541.18) - parallel_1
+Point 7: (1187.23, 900.69) - parallel_1
+Point 8: (203.46, 429.06) - parallel_2
+Point 9: (769.13, 379.87) - parallel_2
+Point 10: (168.74, 627.26) - parallel_2
+Point 11: (857.38, 518.76) - parallel_2
+
+## Lines
+Line 0: (447.95, 835.59) to (438.55, 272.81) - reference
+Line 1: (942.73, 569.39) to (962.99, 207.71) - measure
+Line 2: (259.16, 611.35) to (293.16, 946.26) - parallel_1
+Line 3: (716.32, 541.18) to (1187.23, 900.69) - parallel_1
+Line 4: (203.46, 429.06) to (769.13, 379.87) - parallel_2
+Line 5: (168.74, 627.26) to (857.38, 518.76) - parallel_2

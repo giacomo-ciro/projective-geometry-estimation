@@ -137,10 +137,10 @@ class SimpleMetrologyAnnotator:
         }
         
         # Save as NumPy file
-        np.save('simple_metrology_annotations.npy', annotations)
+        np.save('annotations_img2.npy', annotations)
         
         # Also save as text for easier viewing
-        with open('simple_metrology_annotations.txt', 'w') as f:
+        with open('annotations_img2.txt', 'w') as f:
             f.write("# Simple Metrology Annotations\n\n")
             
             # Save points
