@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
+annotations_filename = 'annotations/annotations_img2_2'
+
 class SimpleMetrologyAnnotator:
     def __init__(self, image_path):
         """Initialize with an image path"""
@@ -137,7 +139,7 @@ class SimpleMetrologyAnnotator:
         }
         
         # Save as NumPy file
-        np.save('annotations_img2_2.npy', annotations)
+        np.save(f'{annotations_filename}.npy', annotations)
         
         # Also save as text for easier viewing
         with open('annotations_img2_2.txt', 'w') as f:
