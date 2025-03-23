@@ -1,25 +1,25 @@
 # Parallel Set 1 (left vanishing point)
 
 # Line 1
-1188,899        # extreme 1
-715,538         # extreme 2
+1188,899        # 1_1
+715,538         # 1_2
 
 # Line 2
-1092,947        # extreme 1
-652,550         # extreme 2
+1092,947        # 2_1
+652,550         # 2_2
 
 
 
 # Parallel Set 2 (right vanishing point)
 
-# Line 1
-260,609         # extreme 1
-776,529         # extreme 2
+# Line 3
+260,609         # 3_1
+652,550         # 3_2 (note: same as 2_2)
     
 
-# Line 2
-836,479         # extreme 1
-153,573         # extreme 2
+# Line 4
+836,479         # 4_1
+153,573         # 4_2
 
 
 # Dave

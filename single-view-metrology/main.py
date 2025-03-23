@@ -55,7 +55,7 @@ obj["person_2_bottom"] = np.array([xs[11], ys[11], 1.0])
 
 # Retrieve parallel lines
 n = 1
-for i in [0, 2, 3, 6]:
+for i in [0, 2, 4, 6]:
     obj[f"point_{n}_1"] = np.array([xs[i], ys[i], 1.0])
     obj[f"point_{n}_2"] = np.array([xs[i+1], ys[i+1], 1.0])
     obj[f"parallel_{n}"] = cross(i, i+1)
