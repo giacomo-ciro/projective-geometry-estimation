@@ -126,19 +126,27 @@ ans = person_2_length_projected * REFERENCE_LENGTH / person_1_length
 plt.imshow(img)
 print(obj.keys())
 for i, c in enumerate(['red', 'red', 'blue', 'blue']):
-    plt.plot(
-        (
-            obj[f"point_{i+1}_1"][0],
-            obj[f"point_{i+1}_2"][0],
-        ),
-        (
-            obj[f"point_{i+1}_1"][1],
-            obj[f"point_{i+1}_2"][1],
-        ),
-        marker = 'x',
-        color = c,
-        linestyle = "",
-    )
+    for j in [1, 2]:
+        plt.plot(
+            obj[f"point_{i+1}_{j}"][0],
+            obj[f"point_{i+1}_{j}"][1],
+            marker = 'x',
+            color = c,
+            linestyle = "",
+        )
+        plt.annotate(
+            f"{i}_{j}",
+            xy = (
+                obj[f"point_{i+1}_{j}"][0],
+                obj[f"point_{i+1}_{j}"][1],
+            ),
+            xytext=(
+                obj[f"point_{i+1}_{j}"][0]-30,
+                obj[f"point_{i+1}_{j}"][1]-30,
+            ),
+            color = c,
+            fontsize = 8,
+        )
 # Plot lines
 for i,c in {
     "heads_line":"pink",
