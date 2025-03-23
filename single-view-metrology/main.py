@@ -1,9 +1,7 @@
-from pickle import TRUE
 import re
 import PIL
 import numpy as np
 import matplotlib.pyplot as plt
-import PIL
 import sys
 
 # Parse command line
