@@ -135,7 +135,7 @@ for i, c in enumerate(['red', 'red', 'blue', 'blue']):
             linestyle = "",
         )
         plt.annotate(
-            f"{i}_{j}",
+            f"{i}-{j}",
             xy = (
                 obj[f"point_{i+1}_{j}"][0],
                 obj[f"point_{i+1}_{j}"][1],
