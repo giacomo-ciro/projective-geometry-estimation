@@ -27,5 +27,5 @@
 458,826         # bottom
 
 # Jack
-957,204         # top
+957,200         # top
 945,565         # bottom

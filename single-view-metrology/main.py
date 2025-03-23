@@ -1,3 +1,4 @@
+from pickle import TRUE
 import re
 import PIL
 import numpy as np
@@ -7,13 +8,14 @@ import sys
 
 # Parse command line
 if len(sys.argv) != 5:
-    print(f'SYNOPSIS: python run main.py path/to/image.jpeg path/to/annotations.txt path/to/output.png <reference_length>')
+    print('SYNOPSIS:\n\tpython3 main.py path/to/image.jpeg path/to/annotations.txt path/to/output.png <reference_length>')
     sys.exit()
 else:
     IMAGE_PATH = sys.argv[1]
     ANNOTATIONS_PATH = sys.argv[2]
     SAVE_PATH = sys.argv[3]
     REFERENCE_LENGTH = float(sys.argv[4])
+    TRUE_LENGTH = 184
     
 
 # Read annotations
@@ -48,10 +50,10 @@ def cross(p1, p2):
 # to store the name and homogeneous coordinates of points & lines        
 obj = {}        # str:np.ndarray
 
-obj["dave_top"] = np.array([xs[8], ys[8], 1.0])
-obj["dave_bottom"] = np.array([xs[9], ys[9], 1.0])
-obj["jack_top"] = np.array([xs[10], ys[10], 1.0])
-obj["jack_bottom"] = np.array([xs[11], ys[11], 1.0])
+obj["person_1_top"] = np.array([xs[8], ys[8], 1.0])
+obj["person_1_bottom"] = np.array([xs[9], ys[9], 1.0])
+obj["person_2_top"] = np.array([xs[10], ys[10], 1.0])
+obj["person_2_bottom"] = np.array([xs[11], ys[11], 1.0])
 
 # Retrieve parallel lines
 n = 1
@@ -60,13 +62,13 @@ for i in [0, 2, 3, 6]:
     n += 1
 
 # Retrieve reference and measure lines
-obj["dave_line"] = np.cross(
-    obj["dave_top"],
-    obj["dave_bottom"]
+obj["person_1_line"] = np.cross(
+    obj["person_1_top"],
+    obj["person_1_bottom"]
 )
-obj["jack_line"] = np.cross(
-    obj["jack_top"],
-    obj["jack_bottom"]
+obj["person_2_line"] = np.cross(
+    obj["person_2_top"],
+    obj["person_2_bottom"]
 )
 
 # Find Vanishing Points & Horizon
@@ -86,47 +88,47 @@ obj["horizon"] = np.cross(
 )
 
 # Intersect with line through the feet
-obj["bottom_line"] = np.cross(
-    obj["dave_bottom"],     
-    obj["jack_bottom"]      
+obj["feet_line"] = np.cross(
+    obj["person_1_bottom"],     
+    obj["person_2_bottom"]      
 )
 
 obj["p_inf"] = np.cross(
-    obj["bottom_line"], 
+    obj["feet_line"], 
     obj["horizon"]
 )
 
-# Project jack's height onto dave's
-obj["top_line"] = np.cross(
+# Project person_2's height onto person_1's
+obj["heads_line"] = np.cross(
     obj["p_inf"],
-    obj["jack_top"] 
+    obj["person_2_top"] 
 )
 
-obj["jack_top_projected"] = np.cross(
-    obj["top_line"], 
-    obj["dave_line"]
+obj["person_2_top_projected"] = np.cross(
+    obj["heads_line"], 
+    obj["person_1_line"]
 )
-obj["jack_top_projected"] = obj["jack_top_projected"] / obj["jack_top_projected"][2]
+obj["person_2_top_projected"] = obj["person_2_top_projected"] / obj["person_2_top_projected"][2]
 
 # Compute their ratio and estimate original height
-dave_length = np.linalg.norm(
-    obj["dave_top"] - obj["dave_bottom"]
+person_1_length = np.linalg.norm(
+    obj["person_1_top"] - obj["person_1_bottom"]
 )
 
-jack_length_projected = np.linalg.norm(
-    obj["jack_top_projected"] - obj["dave_bottom"]
+person_2_length_projected = np.linalg.norm(
+    obj["person_2_top_projected"] - obj["person_1_bottom"]
 )
 
-# jack : dave = jack_img : dave_img
-ans = jack_length_projected * REFERENCE_LENGTH / dave_length
+# person_2 : person_1 = person_2_img : person_1_img
+ans = person_2_length_projected * REFERENCE_LENGTH / person_1_length
 
 # ----------- Plot
 plt.imshow(img)
 
 # Plot lines
 for i,c in {
-    "top_line":"pink",
-    "bottom_line":"pink",
+    "heads_line":"pink",
+    "feet_line":"pink",
     "horizon":"green",
     "parallel_1":"red",
     "parallel_2":"red",
@@ -153,19 +155,23 @@ for i,c in {
 
 # Plot points:
 for i, c in {
-    ("jack_top", "jack_bottom", "jack_line"):"yellow",
-    ("dave_top", "dave_bottom", "dave_line"):"orange",
-    ("jack_top_projected", "dave_bottom", "jack_line_projected"):"brown",
+    ("person_2_top", "person_2_bottom", "person_2_line"):"yellow",
+    ("person_1_top", "person_1_bottom", "person_1_line"):"purple",
+    ("person_2_top_projected", "person_1_bottom", "person_2_line_projected"):"yellow",
 }.items():
     plt.plot(
         (obj[i[0]][0],obj[i[1]][0]),
         (obj[i[0]][1],obj[i[1]][1]),
         c = c,
         marker = 'x',
-        label = i[2]
+        label = i[2],
+        linestyle=":" if "projected" in i[0] else "-"
     )
     
-plt.title(f"Estimated Length = {ans:.2f} cm")
+plt.title(
+    f"Person_1 = {REFERENCE_LENGTH:.2f} cm\n"
+    f"Person_2 = {ans:.2f} cm (true is {TRUE_LENGTH:.2f} cm)"
+    )
 plt.axis("off")
 plt.legend(loc='upper center', bbox_to_anchor=(1,1), ncol=1)
 plt.xlim([0, img.shape[1]])
