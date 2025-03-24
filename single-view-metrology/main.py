@@ -55,7 +55,9 @@ obj["person_2_bottom"] = np.array([xs[11], ys[11], 1.0])
 
 # Retrieve parallel lines
 n = 1
-for i in [0, 2, 3, 6]:
+for i in [0, 2, 4, 6]:
+    obj[f"point_{n}_1"] = np.array([xs[i], ys[i], 1.0])
+    obj[f"point_{n}_2"] = np.array([xs[i+1], ys[i+1], 1.0])
     obj[f"parallel_{n}"] = cross(i, i+1)
     n += 1
 
@@ -122,7 +124,29 @@ ans = person_2_length_projected * REFERENCE_LENGTH / person_1_length
 
 # ----------- Plot
 plt.imshow(img)
-
+print(obj.keys())
+for i, c in enumerate(['red', 'red', 'blue', 'blue']):
+    for j in [1, 2]:
+        plt.plot(
+            obj[f"point_{i+1}_{j}"][0],
+            obj[f"point_{i+1}_{j}"][1],
+            marker = 'x',
+            color = c,
+            linestyle = "",
+        )
+        plt.annotate(
+            f"{i}-{j}",
+            xy = (
+                obj[f"point_{i+1}_{j}"][0],
+                obj[f"point_{i+1}_{j}"][1],
+            ),
+            xytext=(
+                obj[f"point_{i+1}_{j}"][0]-30,
+                obj[f"point_{i+1}_{j}"][1]-30,
+            ),
+            color = c,
+            fontsize = 8,
+        )
 # Plot lines
 for i,c in {
     "heads_line":"pink",
@@ -171,10 +195,10 @@ plt.title(
     f"Person_2 = {ans:.2f} cm (true is {TRUE_LENGTH:.2f} cm)"
     )
 plt.axis("off")
-plt.legend(loc='upper center', bbox_to_anchor=(1,1), ncol=1)
+plt.legend(loc='upper left', bbox_to_anchor=(1,1), ncol=1)
 plt.xlim([0, img.shape[1]])
 plt.ylim([img.shape[0], 0])
-
+plt.tight_layout()
 # Save
 plt.savefig(SAVE_PATH)
 print(f'Result saved to {SAVE_PATH}')
