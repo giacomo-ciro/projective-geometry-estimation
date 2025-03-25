@@ -246,7 +246,8 @@ def ransac_fundamental_matrix(pts1, pts2, iterations = 1000, threshold = 2.0, ad
     
     if len(best_inliers) >= 8:
         best_F = compute_fundamental_matrix(pts1[best_inliers], pts2[best_inliers])
-    else: print(len(best_inliers))    
+    else:
+        print(len(best_inliers))    
     
     return best_F, best_inliers
 
