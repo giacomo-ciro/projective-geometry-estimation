@@ -69,11 +69,6 @@ def plot_correspondences(img1, img2, pts1, pts2):
     # Set random seed for reproducible colors
     np.random.seed(42)
 
-    # Create the match visualization
-    # flags:
-    # cv2.DrawMatchesFlags_DEFAULT: draws lines and keypoints
-    # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS: draws keypoints in size with orientation
-    # cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS: only draws lines, no keypoints
     match_img = cv2.drawMatches(
         img1,
         kp1,
@@ -101,10 +96,7 @@ def normalize_points(points):
     # This is the standard normalization suggested by Hartley
     scale = np.sqrt(2) / mean_dist if mean_dist > 0 else 1.0
 
-    # Create transformation matrix for normalization
-    # [scale   0    -scale*centroid_x]
-    # [0     scale  -scale*centroid_y]
-    # [0       0            1        ]
+    # Create the transformation matrix
     T = np.array(
         [[scale, 0, -scale * centroid[0]], [0, scale, -scale * centroid[1]], [0, 0, 1]]
     )
