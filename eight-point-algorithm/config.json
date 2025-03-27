@@ -1,12 +1,13 @@
 {
-    "seed": null,
-    "normalize": true,
-    "use_ransac": false,
-    "use_sift": false,
-    "n_correspondences": 10,
     "img": "giratina_occhiali",
-    "save_epipolar_lines_plot": "./epipolar.png",
-    "save_correspondences_plot":"./matches.png",
+    
+    "normalize": true,
+    "n_correspondences": 20,
+    
+    "use_ransac": false,
     "ransac_iterations": 1000,
-    "adaptive_ransac": true
+    "ransac_adaptive": false,
+    "ransac_threshold": 0.2,
+
+    "seed": null
 }
