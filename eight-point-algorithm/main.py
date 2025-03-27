@@ -8,7 +8,7 @@ from matplotlib import cm
 # Hyper Parameters
 EPIPOLAR_PATH = "./epipolar.png"
 MATCHES_PATH = "./matches.png"
-IMG = "giratina"
+IMG = "giratina_occhiali"
 
 with open("config.json", "r") as f:
     config = json.load(f)
@@ -117,11 +117,6 @@ def plot_correspondences(img1, img2, pts1, pts2):
     # Set random seed for reproducible colors
     np.random.seed(42)
 
-    # Create the match visualization
-    # flags:
-    # cv2.DrawMatchesFlags_DEFAULT: draws lines and keypoints
-    # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS: draws keypoints in size with orientation
-    # cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS: only draws lines, no keypoints
     match_img = cv2.drawMatches(
         img1,
         kp1,
@@ -131,40 +126,6 @@ def plot_correspondences(img1, img2, pts1, pts2):
         None,
         flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
     )
-
-    # Add additional visualization elements (numbers for point pairs)
-    # h1, w1 = img1.shape[:2]
-
-    # # Generate random colors for each match
-    # colors = np.random.randint(0, 255, (len(pts1), 3)).tolist()
-
-    # # Draw numbers next to points for easier identification
-    # for i, ((x1, y1), (x2, y2)) in enumerate(zip(pts1, pts2)):
-    #     # Get a color for this match
-    #     color = tuple([int(c) for c in colors[i]])
-
-    #     # Draw points with numbers
-    #     cv2.circle(match_img, (x1, y1), 3, color, -1)
-    #     cv2.circle(match_img, (x2 + w1, y2), 3, color, -1)
-
-    #     # Draw numbers
-    #     cv2.putText(match_img, str(i+1), (x1+5, y1-5),
-    #                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
-    #     cv2.putText(match_img, str(i+1), (x2+w1+5, y2-5),
-    #                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
-
-    # # Add title
-    # cv2.putText(match_img, f"Correspondences: {len(pts1)} point pairs",
-    #             (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-
-    # # Convert to RGB for display with matplotlib
-    # match_img_rgb = cv2.cvtColor(match_img, cv2.COLOR_BGR2RGB)
-
-    # # Display with matplotlib for better handling
-    # plt.figure(figsize=(15, 8))
-    # plt.imshow(match_img_rgb)
-    # plt.axis('off')
-    # plt.tight_layout()
 
     return match_img
 
@@ -202,10 +163,7 @@ def normalize_points(points):
     # This is the standard normalization suggested by Hartley
     scale = np.sqrt(2) / mean_dist if mean_dist > 0 else 1.0
 
-    # Create transformation matrix for normalization
-    # [scale   0    -scale*centroid_x]
-    # [0     scale  -scale*centroid_y]
-    # [0       0            1        ]
+    # Create the transformation matrix
     T = np.array(
         [[scale, 0, -scale * centroid[0]], [0, scale, -scale * centroid[1]], [0, 0, 1]]
     )

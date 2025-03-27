@@ -1,7 +1,7 @@
 {
-    "normalize_points": true,
-    "use_ransac": false,
+    "normalize": true,
+    "use_ransac": true,
     "use_sift": true,
-    "n_correspondences": 20
-
+    "n_correspondences": 20,
+    "seed": null
 }
