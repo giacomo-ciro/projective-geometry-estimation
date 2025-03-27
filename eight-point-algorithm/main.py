@@ -728,7 +728,7 @@ def main(
 
     else:               # from manual ANNOTATIONS
         pts1, pts2 = get_annotated_correspondences(correspondences_path)
-        pts1, pts2 = pts1[num_correspondences:, :], pts2[num_correspondences:, :]
+        pts1, pts2 = pts1[:num_correspondences, :], pts2[:num_correspondences, :]
 
     # Plot the correspondences
     match_img = plot_correspondences(img1, img2, pts1, pts2)
@@ -770,7 +770,7 @@ if __name__ == "__main__":
     # Load the images
     img1 = cv2.imread(f"./img/{IMG}_1.jpeg")
     img2 = cv2.imread(f"./img/{IMG}_2.jpeg")
-
+    print(img1)
     # Estimate the fundamental matrix between two images
     F, pts1, pts2, match_img, fig = main(
         img1 = img1,
