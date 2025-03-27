@@ -12,8 +12,8 @@ IMG = "giratina_occhiali"
 NORMALIZE_POINTS = True
 USE_RANSAC = False
 USE_SIFT = False
-CORRESPONDENCES_PATH = "./correspondences.txt"
-NUM_CORRESPONDENCES = 6
+CORRESPONDENCES_PATH = "./correspondences_occhiali.txt"
+NUM_CORRESPONDENCES = 10
 
 np.random.seed(42)
 
