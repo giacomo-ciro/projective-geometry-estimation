@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import random
 
+np.random.seed(42)
+
 def detect_and_match_features(img1, img2, num_matches = 100):
 
     sift = cv2.SIFT_create()
