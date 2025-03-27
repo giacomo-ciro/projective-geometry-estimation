@@ -5,21 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
-
-def cross(p1, p2):
-    """
-    Compute homogeneous cross product between two 2D points.
-
-    Args:
-        p1 (int): Index of the first point in the xs and ys arrays
-        p2 (int): Index of the second point in the xs and ys arrays
-
-    Returns:
-        np.ndarray: The resulting homogeneous cross product
-    """
-    return np.cross(np.array([xs[p1], ys[p1], 1.0]), np.array([xs[p2], ys[p2], 1.0]))
-
-
 def parse_arguments():
     """
     Parse and validate command line arguments.
@@ -95,7 +80,10 @@ def compute_geometric_entities(xs, ys):
     for n, i in enumerate([0, 2, 4, 6]):
         obj[f"point_{n + 1}_1"] = np.array([xs[i], ys[i], 1.0])
         obj[f"point_{n + 1}_2"] = np.array([xs[i + 1], ys[i + 1], 1.0])
-        obj[f"parallel_{n + 1}"] = cross(i, i + 1)
+        obj[f"parallel_{n + 1}"] = np.cross(
+            np.array([xs[i], ys[i], 1.0]),
+            np.array([xs[i+1], ys[i+1], 1.0])
+            )
 
     # Define the vertical lines for each person
     obj["person_1_line"] = np.cross(obj["person_1_top"], obj["person_1_bottom"])
@@ -209,11 +197,7 @@ def visualize_results(
     person_lines = {
         ("person_2_top", "person_2_bottom", "person_2_line"): "yellow",
         ("person_1_top", "person_1_bottom", "person_1_line"): "purple",
-        (
-            "person_2_top_projected",
-            "person_1_bottom",
-            "person_2_line_projected",
-        ): "yellow",
+        ("person_2_top_projected","person_1_bottom","person_2_line_projected"): "yellow",
     }
 
     for points, color in person_lines.items():
