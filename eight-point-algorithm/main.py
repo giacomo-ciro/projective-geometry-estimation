@@ -1,23 +1,14 @@
 import math
+import os
+import sys
 import json
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 
-# Hyper Parameters
-EPIPOLAR_PATH = "./epipolar.png"
-MATCHES_PATH = "./matches.png"
-IMG = "giratina"
+# TODO: look into why the SIFT retrieved correspondences are all squeezed on the left side of the picture
 
-with open("config.json", "r") as f:
-    config = json.load(f)
-
-# Reproducibility
-if config["seed"]:
-    np.random.seed(config["seed"])
-    cv2.setRNGSeed(config["seed"])
-    
 def get_annotated_correspondences(correspondences_path):
     # Read correspondences
     pts1 = []
@@ -549,8 +540,8 @@ def eight_points_ransac(
         indices = np.random.choice(num_points, 8, replace=False)
 
         # Skip degenerate configurations
-        if is_degenerate_configuration(pts1[indices], pts2[indices]):
-            continue
+        # if is_degenerate_configuration(pts1[indices], pts2[indices]):
+        #     continue
 
         # Compute fundamental matrix from the sample
         F = eight_points_algo(pts1[indices], pts2[indices], normalized=normalize_points)
@@ -632,21 +623,7 @@ def eight_points_ransac(
 
 
 def is_degenerate_configuration(pts1, pts2, min_distance=1e-3):
-    """
-    Check if a set of point correspondences forms a degenerate configuration.
 
-    Parameters:
-    -----------
-    pts1, pts2 : numpy.ndarray
-        Sets of point correspondences to check
-    min_distance : float
-        Minimum distance between points to consider them distinct
-
-    Returns:
-    --------
-    bool
-        True if configuration is degenerate, False otherwise
-    """
     # Check if points are too close to each other
     for i in range(len(pts1)):
         for j in range(i + 1, len(pts1)):
@@ -692,61 +669,51 @@ def is_degenerate_configuration(pts1, pts2, min_distance=1e-3):
     return False
 
 
-def main(
-    img1,
-    img2,
-    correspondences_path,
-    num_correspondences,
-    use_ransac,
-    use_sift,
-):
-    """
-    Implement the complete pipeline to estimate the fundamental matrix.
-        1. Retrieve correspondences from the two images using SIFT
-        2. Fit the fundamental matrix using the 8 points algorithm (optionally, use RANSAC for robust fitting)
-        3. Compute and draw the epipolar lines
+def main(config):
 
-    Parameters:
-    -----------
-    img1_path : str
-        Path to the first image
-    img2_path : str
-        Path to the second image
-    use_ransac : bool, optional
-        Whether to use RANSAC for robust estimation (default: True)
-    num_matches : int, optional
-        Number of feature matches to use (default: 100)
-
-    Returns:
-    --------
-    F : numpy.ndarray
-        Estimated fundamental matrix
-    pts1 : numpy.ndarray
-        Points from the first image used in the estimation
-    pts2 : numpy.ndarray
-        Corresponding points from the second image
-    match_img : numpy.ndarray
-        Visualization of the feature matches
-    errors : numpy.ndarray
-        Geometric errors for each point correspondence
-    fig : matplotlib.figure.Figure
-        Visualization of epipolar geometry
-    """
+    # Get path to files
+    img_name = config["img"]
+    img1_path = f"./img/{img_name}_1.jpeg"
+    img2_path = f"./img/{img_name}_2.jpeg"
+    correspondences_path=f"./correspondences_{img_name}.txt"
+    
+    # Check existence of required files
+    if not os.path.exists(img1_path):
+        print("Cannot find image path {img1_path}. Please, rename accordingly.")
+        sys.exit()
+    if not os.path.exists(img2_path):
+        print("Cannot find image path {img2_path}. Please, rename accordingly.")
+        sys.exit()
+    if (not os.path.exists(correspondences_path) and
+        not config["use_sift"]):
+        print("Cannot find correspondences path {correspondences_path}. Please, rename accordingly.")
+        sys.exit()
+    
+    # Load images
+    img1 = cv2.imread(img1_path)
+    img2 = cv2.imread(img2_path)
 
     # Get correspondences
-    if use_sift:        # Using SIFT
-        pts1, pts2 = get_sift_correspondences(img1, img2, num_correspondences)
+    if config["use_sift"]:
+        # Using SIFT
+        pts1, pts2 = get_sift_correspondences(img1, img2, config["n_correspondences"])
 
-    else:               # from manual ANNOTATIONS
+    else:
+        # From correspondences.txt
         pts1, pts2 = get_annotated_correspondences(correspondences_path)
-        pts1, pts2 = pts1[:num_correspondences, :], pts2[:num_correspondences, :]
+        pts1, pts2 = pts1[:config["n_correspondences"], :], pts2[:config["n_correspondences"], :]
 
     # Plot the correspondences
     match_img = plot_correspondences(img1, img2, pts1, pts2)
 
     # Robust estimation with RANSAC
-    if use_ransac:
-        F, inliers = eight_points_ransac(pts1, pts2, iterations=1000, adaptive=True)
+    if config["use_ransac"]:
+        F, inliers = eight_points_ransac(
+            pts1,
+            pts2,
+            iterations = config["ransac_iterations"],
+            adaptive = config["adaptive_ransac"]
+        )
 
         # Keep only inlier points for subsequent operations
         pts1_inliers = pts1[inliers]
@@ -756,7 +723,13 @@ def main(
         print(f"RANSAC found {len(inliers)} inliers out of {len(pts1)} points")
 
         # Visualize epipolar geometry
-        fig = draw_epipolar_lines(img1, img2, pts1_inliers, pts2_inliers, F)
+        fig = draw_epipolar_lines(
+            img1,
+            img2,
+            pts1_inliers,
+            pts2_inliers,
+            F
+        )
 
         return F, pts1_inliers, pts2_inliers, match_img, fig
 
@@ -774,34 +747,34 @@ def main(
 
 if __name__ == "__main__":
     
-    # Load the images
-    img1 = cv2.imread(f"./img/{IMG}_1.jpeg")
-    img2 = cv2.imread(f"./img/{IMG}_2.jpeg")
+    # Load config
+    with open("config.json", "r") as f:
+        config = json.load(f)
 
+    # Reproducibility
+    if config["seed"]:
+        np.random.seed(config["seed"])
+        cv2.setRNGSeed(config["seed"])
+    
     # Estimate the fundamental matrix between two images
     F, pts1, pts2, match_img, fig = main(
-        img1 = img1,
-        img2 = img2,
-        correspondences_path=f"./correspondences_{IMG}.txt",
-        use_ransac=config["use_ransac"],
-        use_sift=config["use_sift"],
-        num_correspondences=config["n_correspondences"],
+        config,
     )
 
     # Compute errors for each point
     errors = compute_geometric_error(pts1, pts2, F)
 
     # Print statistics
-    print(f"Mean geometric error: {np.mean(errors):.4f}")
-    print(f"Max geometric error: {np.max(errors):.4f}")
+    print(f"Mean geometric error: {np.mean(errors):}")
+    print(f"Max geometric error: {np.max(errors):}")
     
     # Epipolar Lines Plot
-    fig.savefig(EPIPOLAR_PATH)
+    fig.savefig(config["save_epipolar_lines_plot"])
 
     # Matched Features Plot
     plt.figure(figsize=(10, 5))
     plt.imshow(match_img)
     plt.title("SIFT Matches")
     plt.axis("off")
-    plt.savefig(MATCHES_PATH)
+    plt.savefig(config["save_correspondences_plot"])
     # plt.show()
