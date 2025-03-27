@@ -1,6 +1,6 @@
 # Projective Geometry Estimation Exercises
 
-## 1. Single view metrology
+## 1. Single view metrology (SVM)
 
 ### Usage
 1. Annotate the image
@@ -24,4 +24,4 @@ Run a copy of **main.ipynb** changing the source of variable **img**.
 - [ ] Draft a report on Overleaf (to be backed up here)
 - [x] Implement the exercises in Python
 
-## 2. Eight point algorithm
+## 2. Eight point algorithm (EPA)

@@ -1,0 +1,20 @@
+# Parallel Set 1 (left vanishing point)
+# Line 1
+692,604        # 1_1
+1056,892         # 1_2
+# Line 2
+624,616        # 2_1
+979,949         # 2_2
+# Parallel Set 2 (right vanishing point)
+# Line 3
+813,540         # 3_1
+78,648         # 3_2
+# Line 4
+625,616         # 4_1
+196,689         # 4_2
+# Dave
+439,279         # top
+434,711         # bottom
+# Jack
+987,267         # top
+941,655         # bottom
