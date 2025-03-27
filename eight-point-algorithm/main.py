@@ -12,9 +12,9 @@ IMG = "giratina"
 
 NORMALIZE_POINTS = True
 USE_RANSAC = False
-USE_SIFT = False
+USE_SIFT = True
 CORRESPONDENCES_PATH = "./correspondences.txt"
-NUM_CORRESPONDENCES = 10
+NUM_CORRESPONDENCES = 6
 
 
 def get_annotated_correspondences(correspondences_path):
@@ -682,8 +682,8 @@ def is_degenerate_configuration(pts1, pts2, min_distance=1e-3):
 
 
 def main(
-    img1_path,
-    img2_path,
+    img1,
+    img2,
     correspondences_path,
     num_correspondences,
     use_ransac,
@@ -721,15 +721,12 @@ def main(
     fig : matplotlib.figure.Figure
         Visualization of epipolar geometry
     """
-    # Load the images
-    img1 = cv2.imread(img1_path)
-    img2 = cv2.imread(img2_path)
 
-    # Detect features and establish correspondences
-    if use_sift:
+    # Get correspondences
+    if use_sift:        # Using SIFT
         pts1, pts2 = get_sift_correspondences(img1, img2, num_correspondences)
 
-    else:
+    else:               # from manual ANNOTATIONS
         pts1, pts2 = get_annotated_correspondences(correspondences_path)
         pts1, pts2 = pts1[num_correspondences:, :], pts2[num_correspondences:, :]
 
@@ -749,41 +746,48 @@ def main(
 
         # Print statistics
         print(f"RANSAC found {len(inliers)} inliers out of {len(pts1)} points")
-        print(f"Mean geometric error: {np.mean(errors):.4f}")
-        print(f"Max geometric error: {np.max(errors):.4f}")
 
         # Visualize epipolar geometry
         fig = draw_epipolar_lines(img1, img2, pts1_inliers, pts2_inliers, F)
 
-        return F, pts1_inliers, pts2_inliers, match_img, errors, fig
+        return F, pts1_inliers, pts2_inliers, match_img, fig
 
     # Standard (non-robust) estimation
     else:
         F = eight_points_algo(pts1, pts2, normalized=NORMALIZE_POINTS)
         errors = compute_geometric_error(pts1, pts2, F)
 
-        # Print statistics
-        print(f"Mean geometric error: {np.mean(errors):.4f}")
-        print(f"Max geometric error: {np.max(errors):.4f}")
 
         # Visualize epipolar geometry
         fig = draw_epipolar_lines(img1, img2, pts1, pts2, F)
 
-        return F, pts1, pts2, match_img, errors, fig
+        return F, pts1, pts2, match_img, fig
 
 
 
 if __name__ == "__main__":
+    
+    # Load the images
+    img1 = cv2.imread(f"./img/{IMG}_1.jpeg")
+    img2 = cv2.imread(f"./img/{IMG}_2.jpeg")
+
     # Estimate the fundamental matrix between two images
-    F, pts1, pts2, match_img, errors, fig = main(
-        img1_path=f"./img/{IMG}_1.jpeg",
-        img2_path=f"./img/{IMG}_2.jpeg",
+    F, pts1, pts2, match_img, fig = main(
+        img1 = img1,
+        img2 = img2,
         correspondences_path=CORRESPONDENCES_PATH,
         use_ransac=USE_RANSAC,
         use_sift=USE_SIFT,
         num_correspondences=NUM_CORRESPONDENCES,
     )
 
+    # Compute errors for each point
+    errors = compute_geometric_error(pts1, pts2, F)
+
+    # Print statistics
+    print(f"Mean geometric error: {np.mean(errors):.4f}")
+    print(f"Max geometric error: {np.max(errors):.4f}")
+    
     # Epipolar Lines Plot
     fig.savefig(EPIPOLAR_PATH)
 
