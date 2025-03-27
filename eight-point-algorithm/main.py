@@ -7,12 +7,11 @@ from matplotlib import cm
 # Hyper Parameters
 EPIPOLAR_PATH = "./epipolar.png"
 MATCHES_PATH = "./matches.png"
-IMG = "giratina_occhiali"
+IMG = "giratina"
 
 NORMALIZE_POINTS = True
-USE_RANSAC = False
+USE_RANSAC = True
 USE_SIFT = False
-CORRESPONDENCES_PATH = "./correspondences_occhiali.txt"
 NUM_CORRESPONDENCES = 10
 
 np.random.seed(42)
@@ -248,11 +247,21 @@ def eight_points_algo(pts1, pts2, normalized=True):
 
     # Build the constraint matrix
     for i in range(n_points):
-        x1, y1, _ = pts1_norm[i]  # Coordinates in image 1
-        x2, y2, _ = pts2_norm[i]  # Corresponding coordinates in image 2
+        y_1, y_2, _ = pts1_norm[i]  # Coordinates in image 1
+        y_prime_1, y_prime_2, _ = pts2_norm[i]  # Corresponding coordinates in image 2
 
-        # Each row has the form [x1*x2, x1*y2, x1, y1*x2, y1*y2, y1, x2, y2, 1]
-        A[i] = [x1 * x2, x1 * y2, x1, y1 * x2, y1 * y2, y1, x2, y2, 1]
+        # Each row has the form
+        A[i] = [
+            y_prime_1 * y_1,
+            y_prime_1 * y_2,
+            y_prime_1,
+            y_prime_2 * y_1,
+            y_prime_2 * y_2,
+            y_prime_2,
+            y_1,
+            y_2,
+            1
+        ]
 
     # Solve the system Af = 0 using SVD
     # The solution is the eigenvector corresponding to the smallest eigenvalue
@@ -416,11 +425,8 @@ def draw_epipolar_lines(img1, img2, pts1, pts2, F, figsize=(15, 10)):
 
 def compute_geometric_error(pts1, pts2, F):
     """
-    Compute the geometric error (Sampson distance) for point correspondences.
-
-    The error is the distance from a point to its corresponding epipolar line,
-    averaged between both directions.
-
+    Compute the geometric error (point-to-line distance) for point correspondences.
+    
     Parameters:
     -----------
     pts1 : numpy.ndarray
@@ -429,7 +435,7 @@ def compute_geometric_error(pts1, pts2, F):
         Corresponding points from the second image in homogeneous coordinates
     F : numpy.ndarray
         Fundamental matrix
-
+        
     Returns:
     --------
     errors : numpy.ndarray
@@ -438,25 +444,30 @@ def compute_geometric_error(pts1, pts2, F):
     # Compute epipolar lines in both directions
     lines1 = compute_epipolar_lines(F, pts2, which="left")
     lines2 = compute_epipolar_lines(F, pts1, which="right")
-
+    
+    # Calculate point-to-line distances
     errors = []
-
-    # For each pair of corresponding points
     for i in range(pts1.shape[0]):
-        # Distance from point in image 1 to its epipolar line
-        x1, y1, _ = pts1[i]
+        # Convert to inhomogeneous coordinates for proper distance calculation
+        x1 = pts1[i, 0] / pts1[i, 2] if pts1[i, 2] != 0 else pts1[i, 0]
+        y1 = pts1[i, 1] / pts1[i, 2] if pts1[i, 2] != 0 else pts1[i, 1]
+        
+        x2 = pts2[i, 0] / pts2[i, 2] if pts2[i, 2] != 0 else pts2[i, 0]
+        y2 = pts2[i, 1] / pts2[i, 2] if pts2[i, 2] != 0 else pts2[i, 1]
+        
+        # Extract line parameters (already normalized in compute_epipolar_lines)
         a1, b1, c1 = lines1[i]
-        dist1 = abs(a1 * x1 + b1 * y1 + c1)  # Distance formula for normalized line
-
-        # Distance from point in image 2 to its epipolar line
-        x2, y2, _ = pts2[i]
         a2, b2, c2 = lines2[i]
-        dist2 = abs(a2 * x2 + b2 * y2 + c2)  # Distance formula for normalized line
-
+        
+        # Calculate point-to-line distances
+        # For normalized lines (a²+b²=1), the distance is |ax+by+c|
+        dist1 = abs(a1 * x1 + b1 * y1 + c1)
+        dist2 = abs(a2 * x2 + b2 * y2 + c2)
+        
         # Average the distances (symmetric measure)
         error = (dist1 + dist2) / 2
         errors.append(error)
-
+    
     return np.array(errors)
 
 
@@ -618,7 +629,6 @@ def eight_points_ransac(
     return best_F, best_inliers
 
 
-
 def is_degenerate_configuration(pts1, pts2, min_distance=1e-3):
     """
     Check if a set of point correspondences forms a degenerate configuration.
@@ -678,7 +688,6 @@ def is_degenerate_configuration(pts1, pts2, min_distance=1e-3):
                         return True
 
     return False
-
 
 
 def main(
@@ -771,7 +780,7 @@ if __name__ == "__main__":
     F, pts1, pts2, match_img, fig = main(
         img1 = img1,
         img2 = img2,
-        correspondences_path=CORRESPONDENCES_PATH,
+        correspondences_path=f"./correspondences_{IMG}.txt",
         use_ransac=USE_RANSAC,
         use_sift=USE_SIFT,
         num_correspondences=NUM_CORRESPONDENCES,
