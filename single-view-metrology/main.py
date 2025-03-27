@@ -165,9 +165,9 @@ def visualize_results(
             plt.annotate(
                 f"{i}-{j}",
                 xy=(obj[point_key][0], obj[point_key][1]),
-                xytext=(obj[point_key][0] - 30, obj[point_key][1] - 30),
+                xytext=(obj[point_key][0] - 15, obj[point_key][1] - 15),
                 color=c,
-                fontsize=8,
+                fontsize=15,
             )
 
     # Plot the geometric lines
@@ -218,7 +218,7 @@ def visualize_results(
 
     # Finalize the plot
     plt.axis("off")
-    plt.legend(loc="upper left", bbox_to_anchor=(1, 1), ncol=1)
+    plt.legend(loc="center", bbox_to_anchor=(0.5, 0), ncol=4, fontsize=14)
     plt.xlim([0, img.shape[1]])
     plt.ylim([img.shape[0], 0])
     plt.tight_layout()
