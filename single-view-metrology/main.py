@@ -6,7 +6,8 @@ import sys
 
 # Parse command line
 if len(sys.argv) != 5:
-    print('USAGE:\n\tpython3 main.py path/to/input_image.jpeg path/to/annotations.txt path/to/output_image.jpeg <reference_length_in_cm>')
+    print('\nUSAGE:\n\tpython3 main.py path/to/input_image.jpeg path/to/annotations.txt path/to/output_image.jpeg <reference_length_in_cm>')
+    print('\nEXAMPLE:\n\tpython3 main.py img/img2.jpeg annotations/annotations_img2.txt output_img2.png 175\n')
     sys.exit()
 else:
     IMAGE_PATH = sys.argv[1]

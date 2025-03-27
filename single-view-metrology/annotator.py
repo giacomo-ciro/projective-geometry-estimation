@@ -4,17 +4,19 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 import os
 
-# Ensure the annotations directory exists
-os.makedirs('annotations', exist_ok=True)
-annotations_filename = 'annotations/annotations_new.txt'
-
 class SimpleMetrologyAnnotator:
-    def __init__(self, image_path):
-        """Initialize with an image path"""
+    def __init__(self, image_path, output_file='annotations_new.txt'):
+        """Initialize with an image path and output file"""
         self.img = cv2.imread(image_path)
         if self.img is None:
             raise ValueError(f"Could not load image from {image_path}")
         self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
+        
+        # Ensure the output directory exists
+        output_dir = os.path.dirname(output_file)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+        self.annotations_filename = output_file
         
         # Store points and lines
         self.points = []
@@ -158,7 +160,7 @@ class SimpleMetrologyAnnotator:
         jack_points = [line for line in self.lines if line['type'] == 'jack']
         
         # Write to file in the requested format
-        with open(annotations_filename, 'w') as f:
+        with open(self.annotations_filename, 'w') as f:
             # Parallel Set 1
             f.write("# Parallel Set 1 (left vanishing point)\n")
             for i, line in enumerate(parallel1_lines, 1):
@@ -203,9 +205,9 @@ class SimpleMetrologyAnnotator:
                     f.write(f"{line['point1'][0]},{line['point1'][1]}         # top\n")
                     f.write(f"{line['point2'][0]},{line['point2'][1]}         # bottom\n")
         
-        self.status_text.set_text(f"Annotations saved to {annotations_filename}")
+        self.status_text.set_text(f"Annotations saved to {self.annotations_filename}")
         self.fig.canvas.draw_idle()
-        print(f"Annotations saved to {annotations_filename}")
+        print(f"Annotations saved to {self.annotations_filename}")
     
     def run(self):
         """Run the annotation tool"""
@@ -221,9 +223,11 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description='Simple Metrology Annotation Tool')
     parser.add_argument('image_path', help='Path to the image file')
+    parser.add_argument('output_file', nargs='?', default='annotations/annotations_new.txt', 
+                      help='Output file for annotations (default: annotations/annotations_new.txt)')
     args = parser.parse_args()
     
-    annotator = SimpleMetrologyAnnotator(args.image_path)
+    annotator = SimpleMetrologyAnnotator(args.image_path, args.output_file)
     annotations = annotator.run()
     
     print("Annotation complete!")
