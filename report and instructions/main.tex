@@ -1,0 +1,73 @@
+\documentclass{article}
+\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{setspace} 
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1mm}
+\setstretch{1.15}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=black,
+    citecolor=blue,
+    urlcolor=blue,
+    %linkbordercolor=black,% hyperlink borders will be red
+    %pdfborderstyle={/S/U/W 1}% border style will be underline of width 1pt
+}
+
+\newcommand{\Title}{Homework (Geometry)}
+\newcommand{\CourseCode}{20878}
+\newcommand{\CourseName}{Computer Vision and Image Processing}
+\newcommand{\Author}{\textbf{Group: Rectory}\\[2mm]
+Alessandro Bellini 0000000\\
+Davide Beltrame 3306906\\ 
+Giacomo Cirò 3160499\\
+}
+\newcommand{\Date}{\today}
+\newcommand{\University}{Bocconi University}
+\newcommand{\Degree}{MSc in Artificial Intelligence}
+\newcommand{\Semester}{Spring 2025}
+
+\title{
+  \CourseCode \ – \CourseName \\[4mm]
+  \textbf{\Title} \\[5mm]
+  \large \Degree \ – \University
+  }
+
+\author{\textbf{Group: Rectory}\\[2mm]
+Alessandro Bellini 0000000\\
+Davide Beltrame 3306906\\ 
+Giacomo Cirò 3160499\\
+}
+\date{\Semester}
+
+\fancyhead[L]{\textsc{20878 - Computer Vision \& Image Processing}}
+\fancyhead[C]{\textsc{}}
+\fancyhead[R]{\textsc{Homework (Geometry)}}
+
+\fancyfoot[L]{}
+\fancyfoot[C]{\thepage}
+\fancyfoot[R]{}
+
+\begin{document}
+
+\pagestyle{fancy}
+
+\maketitle
+
+\input{single_view_metrology}
+
+%\newpage
+
+\input{eight_point_algorithm}
+
+\end{document}
