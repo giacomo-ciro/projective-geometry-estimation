@@ -8,11 +8,23 @@
     \item Two points identifying a segment of unknown length, i.e. the height to be estimated.
 \end{itemize}
 
-\begin{figure}
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.5\linewidth]{img/annotated_points.png}
-    \caption{In blue and red, the points identifying the two pairs of parallel lines. In yellow, the points representing the height to be estimated (Jack's). In purple, the the points representing the reference height (Dave's).}
-    \label{fig:annotated_points}
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{img/annotated_points.png}
+        \vspace{-5pt}  % Adjust this value as needed
+        \caption{In blue and red, the points identifying the two pairs of parallel lines. In yellow, the points representing the height to be estimated (Jack's). In purple, the the points representing the reference height (Dave's).}
+        \label{fig:annotated_points}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{img/retrieved_lines.png}
+        \vspace{-5pt}  % Adjust this value as needed
+        \caption{In blue and red, the lines retrieved using the annotated points and the cross-product property. In yellow and purple, the segment representing the height of the person. The purple segment is true length is known, the yellow is the one we estimated.}
+        \label{fig:retrieved_lines}
+    \end{minipage}
 \end{figure}
 
 \paragraph{Notation} In this section, we use the following notation:
@@ -39,13 +51,6 @@
     \begin{align*}
         l_{parallel_j} &= p_{j,1} \times p_{j,2} \quad \text{with }j=1,2,3,4\\
     \end{align*}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.5\linewidth]{img/retrieved_lines.png}
-    \caption{In blue and red, the lines retrieved using the annotated points and the cross-product property. In yellow and purple, the segment representing the height of the person. The purple segment is true length is known, the yellow is the one we estimated.}
-    \label{fig:retrieved_lines}
-\end{figure}
     
     \item Identify the vanishing points and the horizon (Figure \ref{fig:wide}):
     \begin{align*}
