@@ -284,7 +284,7 @@ def eight_point_algorithm(img1_path, img2_path, use_ransac = True, num_matches =
         return F, pts1, pts2, match_img, errors, fig
 
 # Example usage:
-F, pts1, pts2, match_img, errors, fig = eight_point_algorithm('img/giratina_2.jpeg', 'img/giratina_1.jpeg')
+F, pts1, pts2, match_img, errors, fig = eight_point_algorithm('img/giratina_occhiali_2.jpeg', 'img/giratina_occhiali_1.jpeg')
 plt.figure(figsize=(10, 5))
 plt.imshow(match_img)
 plt.title('SIFT Matches')

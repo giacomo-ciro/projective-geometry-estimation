@@ -1,5 +1,4 @@
 import math
-
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,11 +7,11 @@ from matplotlib import cm
 # Hyper Parameters
 EPIPOLAR_PATH = "./epipolar.png"
 MATCHES_PATH = "./matches.png"
-IMG = "giratina"
+IMG = "giratina_occhiali"
 
 NORMALIZE_POINTS = True
 USE_RANSAC = False
-USE_SIFT = True
+USE_SIFT = False
 CORRESPONDENCES_PATH = "./correspondences.txt"
 NUM_CORRESPONDENCES = 6
 
