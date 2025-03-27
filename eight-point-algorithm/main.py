@@ -741,9 +741,6 @@ def main(
         pts1_inliers = pts1[inliers]
         pts2_inliers = pts2[inliers]
 
-        # Compute geometric errors
-        errors = compute_geometric_error(pts1_inliers, pts2_inliers, F)
-
         # Print statistics
         print(f"RANSAC found {len(inliers)} inliers out of {len(pts1)} points")
 
@@ -755,7 +752,6 @@ def main(
     # Standard (non-robust) estimation
     else:
         F = eight_points_algo(pts1, pts2, normalized=NORMALIZE_POINTS)
-        errors = compute_geometric_error(pts1, pts2, F)
 
 
         # Visualize epipolar geometry
@@ -770,7 +766,7 @@ if __name__ == "__main__":
     # Load the images
     img1 = cv2.imread(f"./img/{IMG}_1.jpeg")
     img2 = cv2.imread(f"./img/{IMG}_2.jpeg")
-    print(img1)
+
     # Estimate the fundamental matrix between two images
     F, pts1, pts2, match_img, fig = main(
         img1 = img1,
