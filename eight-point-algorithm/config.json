@@ -1,0 +1,7 @@
+{
+    "normalize_points": true,
+    "use_ransac": false,
+    "use_sift": true,
+    "n_correspondences": 20
+
+}

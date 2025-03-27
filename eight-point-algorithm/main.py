@@ -1,4 +1,5 @@
 import math
+import json
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,13 +10,14 @@ EPIPOLAR_PATH = "./epipolar.png"
 MATCHES_PATH = "./matches.png"
 IMG = "giratina"
 
-NORMALIZE_POINTS = True
-USE_RANSAC = True
-USE_SIFT = False
-NUM_CORRESPONDENCES = 10
+with open("config.json", "r") as f:
+    config = json.load(f)
 
-np.random.seed(42)
-
+# Reproducibility
+if config["seed"]:
+    np.random.seed(config["seed"])
+    cv2.setRNGSeed(config["seed"])
+    
 def get_annotated_correspondences(correspondences_path):
     # Read correspondences
     pts1 = []
@@ -760,7 +762,7 @@ def main(
 
     # Standard (non-robust) estimation
     else:
-        F = eight_points_algo(pts1, pts2, normalized=NORMALIZE_POINTS)
+        F = eight_points_algo(pts1, pts2, normalized=config["normalize"])
 
 
         # Visualize epipolar geometry
@@ -781,9 +783,9 @@ if __name__ == "__main__":
         img1 = img1,
         img2 = img2,
         correspondences_path=f"./correspondences_{IMG}.txt",
-        use_ransac=USE_RANSAC,
-        use_sift=USE_SIFT,
-        num_correspondences=NUM_CORRESPONDENCES,
+        use_ransac=config["use_ransac"],
+        use_sift=config["use_sift"],
+        num_correspondences=config["n_correspondences"],
     )
 
     # Compute errors for each point
