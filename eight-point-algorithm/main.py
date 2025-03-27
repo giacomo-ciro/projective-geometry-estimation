@@ -19,7 +19,7 @@ def generate_postfix(config: dict) -> str:
     Returns:
         str: Formatted string to use as a postfix for output filenames.
     """
-    a = f"{config['img']}_{config['n_correspondences']}_{config['use_ransac']}"
+    a = f"{config['img']}{"_ransac" if config['use_ransac'] else ""}"
 
     return a
 
@@ -485,10 +485,6 @@ def main(img1: np.ndarray, img2: np.ndarray, config: dict) -> tuple:
 
     # Parse correspondences file and limit to specified number
     pts1, pts2 = get_annotated_correspondences(correspondences_path)
-    pts1, pts2 = (
-        pts1[: config["n_correspondences"], :],
-        pts2[: config["n_correspondences"], :],
-    )
 
     # Plot the correspondences
     match_img = plot_correspondences(img1, img2, pts1, pts2)
