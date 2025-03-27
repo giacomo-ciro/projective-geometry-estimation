@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
-annotations_filename = 'annotations/annotations_img2_2'
+annotations_filename = 'annotations/annotations_new'
 
 class SimpleMetrologyAnnotator:
     def __init__(self, image_path):
@@ -244,7 +244,6 @@ def compute_vanishing_point_from_lines(lines):
         v = v / v[2]
     
     return v
-
 
 def main():
     import argparse

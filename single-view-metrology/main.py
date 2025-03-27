@@ -6,7 +6,7 @@ import sys
 
 # Parse command line
 if len(sys.argv) != 5:
-    print('SYNOPSIS:\n\tpython3 main.py path/to/image.jpeg path/to/annotations.txt path/to/output.png <reference_length>')
+    print('USAGE:\n\tpython3 main.py path/to/input_image.jpeg path/to/annotations.txt path/to/output_image.jpeg <reference_length_in_cm>')
     sys.exit()
 else:
     IMAGE_PATH = sys.argv[1]
@@ -15,7 +15,6 @@ else:
     REFERENCE_LENGTH = float(sys.argv[4])
     TRUE_LENGTH = 184
     
-
 # Read annotations
 img = PIL.Image.open(IMAGE_PATH)
 img = np.array(img)
@@ -23,10 +22,10 @@ img = np.array(img)
 with open(ANNOTATIONS_PATH, 'r') as f:
     annotations = f.read()
     
-    # remove comments
+    # Remove comments
     annotations = re.sub(r"#.*", '', annotations)
 
-    # remove whitespace
+    # Remove whitespace
     annotations = re.sub(r" ", '', annotations)
 
     # Retrieve coordinates
@@ -45,7 +44,7 @@ def cross(p1, p2):
 
     return ans
 
-# to store the name and homogeneous coordinates of points & lines        
+# To store the name and homogeneous coordinates of points & lines        
 obj = {}        # str:np.ndarray
 
 obj["person_1_top"] = np.array([xs[8], ys[8], 1.0])
@@ -71,7 +70,7 @@ obj["person_2_line"] = np.cross(
     obj["person_2_bottom"]
 )
 
-# Find Vanishing Points & Horizon
+# Find vanishing points and horizon
 obj["left_vp"] = np.cross(
     obj["parallel_1"],
     obj["parallel_2"]
@@ -122,7 +121,7 @@ person_2_length_projected = np.linalg.norm(
 # person_2 : person_1 = person_2_img : person_1_img
 ans = person_2_length_projected * REFERENCE_LENGTH / person_1_length
 
-# ----------- Plot
+# Plot image
 plt.imshow(img)
 print(obj.keys())
 for i, c in enumerate(['red', 'red', 'blue', 'blue']):
@@ -175,7 +174,7 @@ for i,c in {
         c = c
     )
 
-# Plot points:
+# Plot points
 for i, c in {
     ("person_2_top", "person_2_bottom", "person_2_line"):"yellow",
     ("person_1_top", "person_1_bottom", "person_1_line"):"purple",
@@ -199,7 +198,7 @@ plt.legend(loc='upper left', bbox_to_anchor=(1,1), ncol=1)
 plt.xlim([0, img.shape[1]])
 plt.ylim([img.shape[0], 0])
 plt.tight_layout()
+
 # Save
 plt.savefig(SAVE_PATH)
 print(f'Result saved to {SAVE_PATH}')
-
