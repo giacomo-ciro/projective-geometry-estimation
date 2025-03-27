@@ -16,6 +16,7 @@ USE_SIFT = True
 CORRESPONDENCES_PATH = "./correspondences.txt"
 NUM_CORRESPONDENCES = 6
 
+np.random.seed(42)
 
 def get_annotated_correspondences(correspondences_path):
     # Read correspondences
