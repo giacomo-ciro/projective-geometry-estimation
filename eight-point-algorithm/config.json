@@ -3,7 +3,6 @@
     
     "use_ransac": true,
     "ransac_iterations": 1000,
-    "ransac_adaptive": false,
     "ransac_threshold": 0.2,
 
     "seed": null
