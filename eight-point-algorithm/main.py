@@ -7,14 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 
-<<<<<<< HEAD
 # TODO: look into why the SIFT retrieved correspondences are all squeezed on the left side of the picture
-=======
-# Hyper Parameters
-EPIPOLAR_PATH = "./epipolar.png"
-MATCHES_PATH = "./matches.png"
-IMG = "giratina_occhiali"
->>>>>>> a209eb5bb1ab985bd665322e8b840dd259e55cd4
 
 def get_annotated_correspondences(correspondences_path):
     # Read correspondences
