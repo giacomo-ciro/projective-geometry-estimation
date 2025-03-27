@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
     "seed": null,
     "normalize": true,
     "use_ransac": false,
@@ -9,4 +10,11 @@
     "save_correspondences_plot":"./matches.png",
     "ransac_iterations": 1000,
     "adaptive_ransac": true
+=======
+    "normalize": true,
+    "use_ransac": true,
+    "use_sift": true,
+    "n_correspondences": 20,
+    "seed": null
+>>>>>>> a209eb5bb1ab985bd665322e8b840dd259e55cd4
 }
