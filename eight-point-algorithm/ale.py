@@ -5,6 +5,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 
+# Hyper Parameters
+NUM_MATCHES = 100
+NORMALIZE_POINTS = True
+USE_RANSAC = False
+EPIPOLAR_PATH = "./epipolar.png"
+MATCHES_PATH = "./matches.png"
+IMG1 = "./img/jack_1.jpeg"
+IMG2 = "./img/jack_2.jpeg"
+
 
 def detect_and_match_features(img1, img2, num_matches=100):
     """
@@ -36,10 +45,7 @@ def detect_and_match_features(img1, img2, num_matches=100):
     kp2, des2 = sift.detectAndCompute(img2, None)
 
     # Configure FLANN matcher parameters
-    FLANN_INDEX_KDTREE = 1
-    index_params = dict(
-        algorithm=FLANN_INDEX_KDTREE, trees=5
-    )  # Use 5 randomized KD-trees for searching
+    index_params = dict(algorithm=1, trees=5)  # Use 5 randomized KD-trees for searching
     search_params = dict(checks=50)  # Number of times to check leaf nodes during search
 
     # FLANN = Fast Library for Approximate Nearest Neighbors
@@ -131,7 +137,7 @@ def normalize_points(points):
     return normalized_points, T
 
 
-def compute_fundamental_matrix(pts1, pts2, normalized=True):
+def compute_fundamental_matrix_with_eight_points(pts1, pts2, normalized=True):
     """
     Compute the fundamental matrix using the eight-point algorithm.
 
@@ -267,6 +273,12 @@ def draw_epipolar_lines(img1, img2, pts1, pts2, F, figsize=(15, 10)):
     h1, w1 = img1.shape[:2]
     h2, w2 = img2.shape[:2]
 
+    # Restrict graph to image dimension
+    ax1.set_xlim(0, w1)
+    ax1.set_ylim(h1, 0)
+    ax2.set_xlim(0, w2)
+    ax2.set_ylim(h2, 0)
+
     # Compute epipolar lines in the right image for points in the left image
     lines2 = compute_epipolar_lines(F, pts1, which="right")
 
@@ -370,11 +382,11 @@ def compute_geometric_error(pts1, pts2, F):
     return np.array(errors)
 
 
-def ransac_fundamental_matrix(
+def eight_points_ransac(
     pts1, pts2, iterations=1000, threshold=2.0, adaptive=True, final_percentile=0.7
 ):
     """
-    Estimate the fundamental matrix robustly using RANSAC.
+    Estimate the fundamental matrix robustly using RANSAC and the eight point.
 
     Parameters:
     -----------
@@ -409,7 +421,9 @@ def ransac_fundamental_matrix(
             indices = random.sample(range(num_points), 8)
 
             # Compute fundamental matrix from the sample
-            F = compute_fundamental_matrix(pts1[indices], pts2[indices])
+            F = compute_fundamental_matrix_with_eight_points(
+                pts1[indices], pts2[indices], normalized=NORMALIZE_POINTS
+            )
 
             # Calculate error for all points
             errors = compute_geometric_error(pts1, pts2, F)
@@ -427,7 +441,9 @@ def ransac_fundamental_matrix(
         # Stage 1: Initial RANSAC with fixed threshold
         for _ in range(iterations // 2):
             indices = random.sample(range(num_points), 8)
-            F = compute_fundamental_matrix(pts1[indices], pts2[indices])
+            F = compute_fundamental_matrix_with_eight_points(
+                pts1[indices], pts2[indices], normalized=NORMALIZE_POINTS
+            )
             errors = compute_geometric_error(pts1, pts2, F)
             inliers = np.where(errors < threshold)[0]
 
@@ -438,8 +454,8 @@ def ransac_fundamental_matrix(
         # If we found enough inliers, refine the threshold
         if len(best_inliers) >= 8:
             # Compute a refined F using all current inliers
-            refined_F = compute_fundamental_matrix(
-                pts1[best_inliers], pts2[best_inliers]
+            refined_F = compute_fundamental_matrix_with_eight_points(
+                pts1[best_inliers], pts2[best_inliers], normalized=NORMALIZE_POINTS
             )
 
             # Calculate errors for all points using the refined F
@@ -459,7 +475,9 @@ def ransac_fundamental_matrix(
             # Stage 2: Second round of RANSAC with adaptive threshold
             for _ in range(iterations // 2):
                 indices = random.sample(range(num_points), 8)
-                F = compute_fundamental_matrix(pts1[indices], pts2[indices])
+                F = compute_fundamental_matrix_with_eight_points(
+                    pts1[indices], pts2[indices], normalized=NORMALIZE_POINTS
+                )
                 errors = compute_geometric_error(pts1, pts2, F)
                 inliers = np.where(errors < adaptive_threshold)[0]
 
@@ -469,7 +487,9 @@ def ransac_fundamental_matrix(
 
     # Final refinement using all inliers
     if len(best_inliers) >= 8:
-        best_F = compute_fundamental_matrix(pts1[best_inliers], pts2[best_inliers])
+        best_F = compute_fundamental_matrix_with_eight_points(
+            pts1[best_inliers], pts2[best_inliers], normalized=NORMALIZE_POINTS
+        )
     else:
         print(
             f"Warning: Only {len(best_inliers)} inliers found, which is less than the minimum 8 required"
@@ -478,9 +498,12 @@ def ransac_fundamental_matrix(
     return best_F, best_inliers
 
 
-def eight_point_algorithm(img1_path, img2_path, use_ransac=True, num_matches=100):
+def main(img1_path, img2_path, use_ransac=True, num_matches=100):
     """
-    Implement the complete eight-point algorithm workflow to estimate the fundamental matrix.
+    Implement the complete pipeline to estimate the fundamental matrix.
+        1. Retrieve correspondences from the two images using SIFT
+        2. Fit the fundamental matrix using the 8 points algorithm (optionally, use RANSAC for robust fitting)
+        3. Compute and draw the epipolar lines
 
     Parameters:
     -----------
@@ -517,9 +540,7 @@ def eight_point_algorithm(img1_path, img2_path, use_ransac=True, num_matches=100
 
     # Robust estimation with RANSAC
     if use_ransac:
-        F, inliers = ransac_fundamental_matrix(
-            pts1, pts2, iterations=1000, adaptive=True
-        )
+        F, inliers = eight_points_ransac(pts1, pts2, iterations=1000, adaptive=True)
 
         # Keep only inlier points for subsequent operations
         pts1_inliers = pts1[inliers]
@@ -540,7 +561,9 @@ def eight_point_algorithm(img1_path, img2_path, use_ransac=True, num_matches=100
 
     # Standard (non-robust) estimation
     else:
-        F = compute_fundamental_matrix(pts1, pts2)
+        F = compute_fundamental_matrix_with_eight_points(
+            pts1, pts2, normalized=NORMALIZE_POINTS
+        )
         errors = compute_geometric_error(pts1, pts2, F)
 
         # Print statistics
@@ -556,13 +579,20 @@ def eight_point_algorithm(img1_path, img2_path, use_ransac=True, num_matches=100
 # Example usage:
 if __name__ == "__main__":
     # Estimate the fundamental matrix between two images
-    F, pts1, pts2, match_img, errors, fig = eight_point_algorithm(
-        "./img/giratina_1.jpeg", "./img/giratina_2.jpeg"
+    F, pts1, pts2, match_img, errors, fig = main(
+        img1_path=IMG1,
+        img2_path=IMG2,
+        use_ransac=USE_RANSAC,
+        num_matches=NUM_MATCHES,
     )
 
-    # Display the matched features
+    # Epipolar Lines Plot
+    fig.savefig(EPIPOLAR_PATH)
+
+    # Matched Features Plot
     plt.figure(figsize=(10, 5))
     plt.imshow(match_img)
     plt.title("SIFT Matches")
     plt.axis("off")
-    plt.show()
+    plt.savefig(MATCHES_PATH)
+    # plt.show()
