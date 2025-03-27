@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -503,7 +502,7 @@ def main(img1: np.ndarray, img2: np.ndarray, config: dict) -> tuple:
         pts2_inliers = pts2[inliers]
 
         # Print statistics
-        print(f"RANSAC found {len(inliers)} inliers out of {len(pts1)} points")
+        # print(f"RANSAC found {len(inliers)} inliers out of {len(pts1)} points")
 
         return F, pts1_inliers, pts2_inliers, match_img
 
@@ -514,12 +513,89 @@ def main(img1: np.ndarray, img2: np.ndarray, config: dict) -> tuple:
         return F, pts1, pts2, match_img
 
 
+def run_multiple_trials(config, num_trials=100):
+    """
+    Run multiple trials of the fundamental matrix estimation and collect error statistics.
+    
+    Args:
+        config (dict): Configuration dictionary with parameters for the algorithm.
+        num_trials (int): Number of trials to run.
+        
+    Returns:
+        dict: Dictionary containing statistics of mean and max errors across trials.
+    """
+    mean_errors = []
+    max_errors = []
+    
+    # Get images (only need to do this once)
+    img1, img2 = get_images(config)
+    
+    # Get correspondences path
+    correspondences_path = f"./correspondences_{config['img']}.txt"
+    if not os.path.exists(correspondences_path):
+        print(f"Cannot find correspondences path {correspondences_path}. Please, rename accordingly.")
+        sys.exit()
+    
+    # Parse correspondences file
+    pts1, pts2 = get_annotated_correspondences(correspondences_path)
+    
+    print(f"Running {num_trials} trials...")
+    for i in range(num_trials):
+        if i % 10 == 0:
+            print(f"Trial {i}/{num_trials}")
+            
+        # Set a different random seed for each trial
+        np.random.seed(config["seed"] + i if config["seed"] else None)
+        cv2.setRNGSeed(config["seed"] + i if config["seed"] else i)
+        
+        # Run the fundamental matrix estimation
+        if config["use_ransac"]:
+            F, inliers = eight_points_ransac(
+                pts1,
+                pts2,
+                threshold=config["ransac_threshold"],
+                iterations=config["ransac_iterations"],
+            )
+            pts1_inliers = pts1[inliers]
+            pts2_inliers = pts2[inliers]
+        else:
+            F = eight_points_algo(pts1, pts2)
+            pts1_inliers, pts2_inliers = pts1, pts2
+        
+        # Compute errors
+        errors = compute_geometric_error(pts1_inliers, pts2_inliers, F)
+        
+        # Store the statistics
+        mean_errors.append(np.mean(errors))
+        max_errors.append(np.max(errors))
+    
+    # Calculate statistics across all trials
+    stats = {
+        "mean_error": {
+            "average": np.mean(mean_errors),
+            "median": np.median(mean_errors),
+            "std_dev": np.std(mean_errors)
+        },
+        "max_error": {
+            "average": np.mean(max_errors),
+            "median": np.median(max_errors),
+            "std_dev": np.std(max_errors)
+        },
+        "raw_data": {
+            "mean_errors": mean_errors,
+            "max_errors": max_errors
+        }
+    }
+    
+    return stats
+
+
 if __name__ == "__main__":
     """
     Main entry point of the script for epipolar geometry estimation.
     
-    This loads configuration from a JSON file, runs the estimation algorithm,
-    computes errors, and generates visualizations.
+    This loads configuration from a JSON file, runs the estimation algorithm multiple times,
+    computes error statistics, and generates visualizations.
     """
     # --------------------- PLOTTING -------------------
     # Load config
@@ -531,24 +607,28 @@ if __name__ == "__main__":
         np.random.seed(config["seed"])
         cv2.setRNGSeed(config["seed"])
 
-    # Get images
+    # Get images for visualization
     img1, img2 = get_images(config)
 
-    # --------------- 8 POINTS ALGO ----------------
-    # Run the fundamental matrix estimation
-    F, pts1, pts2, match_img = main(
-        img1,
-        img2,
-        config,
-    )
+    # Run a single trial for visualization purposes
+    F, pts1, pts2, match_img = main(img1, img2, config)
 
-    # --------------------- ERRORS -------------------
-    # Compute errors for each point (distance to epipolar line)
+    # Display single trial error statistics
     errors = compute_geometric_error(pts1, pts2, F)
-
-    # Print error statistics
-    print(f"Mean geometric error: {np.mean(errors):}")
-    print(f"Max geometric error: {np.max(errors):}")
+    print(f"Single trial - Mean geometric error: {np.mean(errors)}")
+    print(f"Single trial - Max geometric error: {np.max(errors)}")
+    
+    # Run multiple trials and get statistics
+    stats = run_multiple_trials(config, num_trials=100)
+    
+    # Print statistics
+    print("\nError Statistics across 100 trials:")
+    print(f"Mean Error - Average: {stats['mean_error']['average']:.6f}, "
+          f"Median: {stats['mean_error']['median']:.6f}, "
+          f"StdDev: {stats['mean_error']['std_dev']:.6f}")
+    print(f"Max Error - Average: {stats['max_error']['average']:.6f}, "
+          f"Median: {stats['max_error']['median']:.6f}, "
+          f"StdDev: {stats['max_error']['std_dev']:.6f}")
 
     # --------------------- PLOTTING -------------------
     # Generate output filename postfix based on configuration
@@ -569,3 +649,7 @@ if __name__ == "__main__":
     plt.imshow(match_img)
     plt.axis("off")
     plt.savefig(f"./save/correspondeces_{postfix}.png")
+    
+    # Optionally, save the statistics to a file
+    with open(f"./save/error_stats_{postfix}.json", "w") as f:
+        json.dump({k: v for k, v in stats.items() if k != "raw_data"}, f, indent=4)
