@@ -1,10 +1,9 @@
 {
     "img": "giratina_occhiali",
-    
-    "normalize": true,
+
     "n_correspondences": 20,
     
-    "use_ransac": false,
+    "use_ransac": true,
     "ransac_iterations": 1000,
     "ransac_adaptive": false,
     "ransac_threshold": 0.2,

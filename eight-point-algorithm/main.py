@@ -1,73 +1,109 @@
+import json
 import os
 import sys
-import json
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 
-# TODO: look into why the SIFT retrieved correspondences are all squeezed on the left side of the picture
 
-def generate_postfix(config):
-    a =  (
-        f"{config["img"]}"
-        f"_{config["n_correspondences"]}"
-        f"_{config["use_ransac"]}"
-    )
+def generate_postfix(config: dict) -> str:
+    """
+    Generate a string postfix for filenames based on configuration parameters.
+
+    Args:
+        config (dict): Configuration dictionary containing image name, number of correspondences,
+                      and whether RANSAC is used.
+
+    Returns:
+        str: Formatted string to use as a postfix for output filenames.
+    """
+    a = f"{config['img']}_{config['n_correspondences']}_{config['use_ransac']}"
 
     return a
 
-def get_images(config):
+
+def get_images(config: dict) -> tuple:
+    """
+    Load image pairs based on configuration.
+
+    Args:
+        config (dict): Configuration dictionary containing the image base name.
+
+    Returns:
+        tuple: A pair of loaded images (img1, img2) using OpenCV.
+
+    Raises:
+        SystemExit: If either image cannot be found.
+    """
     img_name = config["img"]
     img1_path = f"./img/{img_name}_1.jpeg"
     img2_path = f"./img/{img_name}_2.jpeg"
-    
-    # Check existence of required files
+
     if not os.path.exists(img1_path):
-        print("Cannot find image path {img1_path}. Please, rename accordingly.")
+        print(f"Cannot find image path {img1_path}. Please, rename accordingly.")
         sys.exit()
     if not os.path.exists(img2_path):
-        print("Cannot find image path {img2_path}. Please, rename accordingly.")
+        print(f"Cannot find image path {img2_path}. Please, rename accordingly.")
         sys.exit()
-    
-    # Load images
+
     return cv2.imread(img1_path), cv2.imread(img2_path)
 
-def get_annotated_correspondences(correspondences_path):
-    
-    # Read correspondences
+
+def get_annotated_correspondences(correspondences_path: str) -> tuple:
+    """
+    Parse a text file containing manually annotated point correspondences.
+
+    Args:
+        correspondences_path (str): Path to the file containing point correspondences.
+
+    Returns:
+        tuple: Two numpy arrays containing homogeneous coordinates (x, y, 1) for corresponding points
+               in the first and second images.
+    """
     pts1 = []
     pts2 = []
 
     with open(correspondences_path, "r") as f:
         for line in f:
-            # Skip comment lines
-            if line.startswith("#"):
+            if line.startswith("#"):  # Skip comment lines
                 continue
-
-            # Parse line
             try:
                 values = line.strip().split()
                 if len(values) == 4:
                     x1, y1, x2, y2 = map(float, values)
-                    pts1.append((x1, y1, 1.0))
-                    pts2.append((x2, y2, 1.0))
+                    pts1.append((x1, y1, 1.0))  # Add homogeneous coordinate
+                    pts2.append((x2, y2, 1.0))  # Add homogeneous coordinate
             except ValueError:
                 continue
 
     return np.array(pts1), np.array(pts2)
 
-def plot_correspondences(img1, img2, pts1, pts2):
-    # Convert points to keypoints
+
+def plot_correspondences(
+    img1: np.ndarray, img2: np.ndarray, pts1: np.ndarray, pts2: np.ndarray
+) -> np.ndarray:
+    """
+    Visualize point correspondences between two images.
+
+    Args:
+        img1 (np.ndarray): First image.
+        img2 (np.ndarray): Second image.
+        pts1 (np.ndarray): Point coordinates in the first image (Nx3).
+        pts2 (np.ndarray): Corresponding point coordinates in the second image (Nx3).
+
+    Returns:
+        np.ndarray: Image showing both input images with lines connecting corresponding points.
+    """
+    # Convert points to keypoints for OpenCV visualization
     kp1 = [cv2.KeyPoint(x, y, 1) for x, y, u in pts1]
     kp2 = [cv2.KeyPoint(x, y, 1) for x, y, u in pts2]
 
-    # Create match objects
+    # Create DMatch objects to define correspondences
     matches = [cv2.DMatch(i, i, 0) for i in range(len(pts1))]
 
-    # Set random seed for reproducible colors
-    np.random.seed(42)
-
+    # Draw matches between the two images
     match_img = cv2.drawMatches(
         img1,
         kp1,
@@ -80,22 +116,29 @@ def plot_correspondences(img1, img2, pts1, pts2):
 
     return match_img
 
-def normalize_points(points):
 
-    # Compute the centroid of the points (ignoring the homogeneous coordinate)
+def normalize_points(points: np.ndarray) -> tuple:
+    """
+    Normalize points using Hartley normalization to improve numerical stability.
+
+    Transforms the points such that their centroid is at the origin and the average
+    distance from the origin is sqrt(2).
+
+    Args:
+        points (np.ndarray): Array of points in homogeneous coordinates (Nx3).
+
+    Returns:
+        tuple: Normalized points and the transformation matrix T.
+    """
+    # Make mean 0
     centroid = np.mean(points[:, :2], axis=0)
-
-    # Center the points by subtracting the centroid
     centered_points = points[:, :2] - centroid
 
-    # Calculate the average distance from the origin
+    # Scale factor to make distance from the origin = sqrt(2) (Hartley Normalization)
     mean_dist = np.mean(np.sqrt(np.sum(centered_points**2, axis=1)))
-
-    # Compute scale factor to make average distance sqrt(2)
-    # This is the standard normalization suggested by Hartley
     scale = np.sqrt(2) / mean_dist if mean_dist > 0 else 1.0
 
-    # Create the transformation matrix
+    # Create the transformation matrix (to later transform the estimated matrix F)
     T = np.array(
         [[scale, 0, -scale * centroid[0]], [0, scale, -scale * centroid[1]], [0, 0, 1]]
     )
@@ -105,15 +148,24 @@ def normalize_points(points):
 
     return normalized_points, T
 
-def eight_points_algo(pts1, pts2, normalized=True):
 
-    # Optionally normalize points for better numerical stability
-    if normalized:
-        pts1_norm, T1 = normalize_points(pts1)
-        pts2_norm, T2 = normalize_points(pts2)
-    else:
-        pts1_norm, pts2_norm = pts1, pts2
-        T1, T2 = np.eye(3), np.eye(3)  # Identity matrices
+def eight_points_algo(pts1: np.ndarray, pts2: np.ndarray) -> np.ndarray:
+    """
+    Implementation of the eight-point algorithm for fundamental matrix estimation.
+
+    This function first normalizes the points for numerical stability, builds the constraint
+    matrix, solves for F using SVD, enforces the rank-2 constraint, and then denormalizes.
+
+    Args:
+        pts1 (np.ndarray): Points in the first image (Nx3 homogeneous coordinates).
+        pts2 (np.ndarray): Corresponding points in the second image (Nx3 homogeneous coordinates).
+
+    Returns:
+        np.ndarray: The estimated 3x3 fundamental matrix F.
+    """
+    # Normalize points for better numerical stability
+    pts1_norm, T1 = normalize_points(pts1)
+    pts2_norm, T2 = normalize_points(pts2)
 
     # A is the constraint matrix with one row per point correspondence
     # Each row represents the equation x2^T * F * x1 = 0
@@ -125,7 +177,7 @@ def eight_points_algo(pts1, pts2, normalized=True):
         y_1, y_2, _ = pts1_norm[i]  # Coordinates in image 1
         y_prime_1, y_prime_2, _ = pts2_norm[i]  # Corresponding coordinates in image 2
 
-        # Each row has the form
+        # Each row has the form [x'x, x'y, x', y'x, y'y, y', x, y, 1]
         A[i] = [
             y_prime_1 * y_1,
             y_prime_1 * y_2,
@@ -135,7 +187,7 @@ def eight_points_algo(pts1, pts2, normalized=True):
             y_prime_2,
             y_1,
             y_2,
-            1
+            1,
         ]
 
     # Solve the system Af = 0 using SVD
@@ -156,18 +208,30 @@ def eight_points_algo(pts1, pts2, normalized=True):
     F_norm = U @ np.diag(S) @ Vt
 
     # Denormalize the fundamental matrix if normalization was applied
-    if normalized:
-        F = T2.T @ F_norm @ T1
-    else:
-        F = F_norm
+    F = T2.T @ F_norm @ T1
 
     # Normalize F to make F[2,2] = 1 (common convention)
     F = F / F[2, 2] if F[2, 2] != 0 else F
 
     return F
 
-def compute_epipolar_lines(F, points, which="left"):
 
+def compute_epipolar_lines(
+    F: np.ndarray, points: np.ndarray, which: str = "left"
+) -> np.ndarray:
+    """
+    Compute epipolar lines in one image from points in the other image.
+
+    Args:
+        F (np.ndarray): Fundamental matrix (3x3).
+        points (np.ndarray): Points in homogeneous coordinates (Nx3).
+        which (str): Direction of computation. 'left' computes lines in left image
+                     from points in right image, and 'right' does the opposite.
+
+    Returns:
+        np.ndarray: Epipolar lines represented as [a, b, c] where ax + by + c = 0.
+                   Lines are normalized such that a^2 + b^2 = 1.
+    """
     if which == "left":
         # Lines in the left image: l = F^T * x2
         lines = np.dot(F.T, points.T).T
@@ -179,7 +243,7 @@ def compute_epipolar_lines(F, points, which="left"):
     # This makes the distance from a point to a line equal to |ax + by + c|
     # Recall in 2D geometry the distance of a point to a line is just:
     # distance = abs(ax₀ + by₀ + c) / sqrt(a² + b²)
-    # hence if we normalize the coordinates in this 
+    # hence if we normalize the coordinates in this
     # way we simplify the distance computation
     # (we can do this because lines in the projective plane are
     # invariant under scalar multiplication)
@@ -188,8 +252,29 @@ def compute_epipolar_lines(F, points, which="left"):
 
     return lines
 
-def draw_epipolar_lines(img1, img2, pts1, pts2, F, figsize=(15, 10)):
 
+def draw_epipolar_lines(
+    img1: np.ndarray,
+    img2: np.ndarray,
+    pts1: np.ndarray,
+    pts2: np.ndarray,
+    F: np.ndarray,
+    figsize: tuple = (15, 10),
+) -> plt.Figure:
+    """
+    Visualize epipolar lines in both images based on the fundamental matrix.
+
+    Args:
+        img1 (np.ndarray): First image.
+        img2 (np.ndarray): Second image.
+        pts1 (np.ndarray): Points in the first image (Nx3 homogeneous coordinates).
+        pts2 (np.ndarray): Corresponding points in the second image (Nx3 homogeneous coordinates).
+        F (np.ndarray): Fundamental matrix (3x3).
+        figsize (tuple): Figure size for the plot.
+
+    Returns:
+        plt.Figure: Matplotlib figure containing the visualization.
+    """
     # Create a figure with two subplots side by side
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
@@ -203,9 +288,9 @@ def draw_epipolar_lines(img1, img2, pts1, pts2, F, figsize=(15, 10)):
 
     # Restrict graph to image dimension
     ax1.set_xlim(0, w1)
-    ax1.set_ylim(h1, 0)
+    ax1.set_ylim(h1, 0)  # Inverted y-axis for image coordinates
     ax2.set_xlim(0, w2)
-    ax2.set_ylim(h2, 0)
+    ax2.set_ylim(h2, 0)  # Inverted y-axis for image coordinates
 
     # Create a color map to assign each point/line pair a unique color
     colors = cm.rainbow(np.linspace(0, 1, len(pts1)))
@@ -215,21 +300,22 @@ def draw_epipolar_lines(img1, img2, pts1, pts2, F, figsize=(15, 10)):
 
     # For each point in the left image and its corresponding epipolar line in the right image
     for i, (pt1, line, color) in enumerate(zip(pts1, lines2, colors)):
-
         x1, y1, _ = pt1
         ax1.scatter(x1, y1, c=color.reshape(1, -1), s=50)
 
+        # Calculate line endpoints
         a, b, c = line
-        if abs(b) > 1e-8:
+        if abs(b) > 1e-8:  # Non-horizontal line
             x_start, x_end = 0, w2
             y_start = (-c - a * x_start) / b
             y_end = (-c - a * x_end) / b
-        else:
+        else:  # Horizontal line
             y_start, y_end = 0, h2
             x_start = x_end = -c / a if abs(a) > 1e-8 else 0
 
         ax2.plot([x_start, x_end], [y_start, y_end], c=color)
 
+        # Plot the corresponding point in the right image
         x2, y2, _ = pts2[i]
         ax2.scatter(x2, y2, c=color.reshape(1, -1), s=50)
 
@@ -238,13 +324,12 @@ def draw_epipolar_lines(img1, img2, pts1, pts2, F, figsize=(15, 10)):
 
     # For each point in the right image and its corresponding epipolar line in the left image
     for i, (pt2, line, color) in enumerate(zip(pts2, lines1, colors)):
-
         a, b, c = line
         if abs(b) > 1e-8:  # Non-vertical line
             x_start, x_end = 0, w1
             y_start = (-c - a * x_start) / b
             y_end = (-c - a * x_end) / b
-        else: 
+        else:  # Vertical line
             y_start, y_end = 0, h1
             x_start = x_end = -c / a if abs(a) > 1e-8 else 0
 
@@ -257,60 +342,76 @@ def draw_epipolar_lines(img1, img2, pts1, pts2, F, figsize=(15, 10)):
 
     return fig
 
-def compute_geometric_error(pts1, pts2, F):
+
+def compute_geometric_error(
+    pts1: np.ndarray, pts2: np.ndarray, F: np.ndarray
+) -> np.ndarray:
     """
-    Compute the geometric error (point-to-line distance) for point correspondences.
-    
-    Parameters:
-    -----------
-    pts1 : numpy.ndarray
-        Points from the first image in homogeneous coordinates
-    pts2 : numpy.ndarray
-        Corresponding points from the second image in homogeneous coordinates
-    F : numpy.ndarray
-        Fundamental matrix
-        
+    Compute symmetric epipolar distance error for point correspondences.
+
+    The error is the average of the distances from each point to its corresponding epipolar line
+    in both directions.
+
+    Args:
+        pts1 (np.ndarray): Points in the first image (Nx3 homogeneous coordinates).
+        pts2 (np.ndarray): Corresponding points in the second image (Nx3 homogeneous coordinates).
+        F (np.ndarray): Fundamental matrix (3x3).
+
     Returns:
-    --------
-    errors : numpy.ndarray
-        Array of geometric errors for each point correspondence
+        np.ndarray: Array of geometric errors for each point correspondence.
     """
     # Compute epipolar lines in both directions
     lines1 = compute_epipolar_lines(F, pts2, which="left")
     lines2 = compute_epipolar_lines(F, pts1, which="right")
-    
+
     # Calculate point-to-line distances
     errors = []
     for i in range(pts1.shape[0]):
         # Convert to inhomogeneous coordinates for proper distance calculation
         x1 = pts1[i, 0] / pts1[i, 2] if pts1[i, 2] != 0 else pts1[i, 0]
         y1 = pts1[i, 1] / pts1[i, 2] if pts1[i, 2] != 0 else pts1[i, 1]
-        
+
         x2 = pts2[i, 0] / pts2[i, 2] if pts2[i, 2] != 0 else pts2[i, 0]
         y2 = pts2[i, 1] / pts2[i, 2] if pts2[i, 2] != 0 else pts2[i, 1]
-        
+
         # Extract line parameters (already normalized in compute_epipolar_lines)
         a1, b1, c1 = lines1[i]
         a2, b2, c2 = lines2[i]
-        
+
         # Calculate point-to-line distances
         # For normalized lines (a²+b²=1), the distance is |ax+by+c|
         dist1 = abs(a1 * x1 + b1 * y1 + c1)
         dist2 = abs(a2 * x2 + b2 * y2 + c2)
-        
+
         # Average the distances (symmetric measure)
         error = (dist1 + dist2) / 2
         errors.append(error)
-    
+
     return np.array(errors)
 
-def eight_points_ransac(
-    pts1,
-    pts2,
-    iterations,
-    threshold,
-):
 
+def eight_points_ransac(
+    pts1: np.ndarray, pts2: np.ndarray, iterations: int, threshold: float
+) -> tuple:
+    """
+    Robust fundamental matrix estimation using RANSAC with the eight-point algorithm.
+
+    Randomly samples 8 point correspondences, estimates F, and keeps the model with
+    the most inliers. Final F is computed using all inliers.
+
+    Args:
+        pts1 (np.ndarray): Points in the first image (Nx3 homogeneous coordinates).
+        pts2 (np.ndarray): Corresponding points in the second image (Nx3 homogeneous coordinates).
+        iterations (int): Number of RANSAC iterations.
+        threshold (float): Error threshold for considering a point as an inlier.
+
+    Returns:
+        tuple: (F, inliers) where F is the fundamental matrix and inliers is an array
+               of indices of inlier points.
+
+    Raises:
+        ValueError: If fewer than 8 point correspondences are provided.
+    """
     best_F = None
     best_inliers = np.array([], dtype=int)
     num_points = pts1.shape[0]
@@ -321,17 +422,13 @@ def eight_points_ransac(
             f"Need at least 8 point correspondences, but only {num_points} provided"
         )
 
-    # Normalize points flag should be True for better numerical stability
-    normalize_points = True
-
     # RANSAC implementation
     for i in range(iterations):
-
         # Randomly sample 8 points (minimum needed for the eight-point algorithm)
         indices = np.random.choice(num_points, 8, replace=False)
 
         # Compute fundamental matrix from the sample
-        F = eight_points_algo(pts1[indices], pts2[indices], normalized=normalize_points)
+        F = eight_points_algo(pts1[indices], pts2[indices])
 
         # Calculate error for all points
         errors = compute_geometric_error(pts1, pts2, F)
@@ -346,12 +443,8 @@ def eight_points_ransac(
 
     # Final refinement using all inliers
     if len(best_inliers) >= 8:
-        print(
-            f"RANSAC found {len(best_inliers)} inliers, estimating the final F."
-        )
-        best_F = eight_points_algo(
-            pts1[best_inliers], pts2[best_inliers], normalized=normalize_points
-        )
+        print(f"RANSAC found {len(best_inliers)} inliers, estimating the final F.")
+        best_F = eight_points_algo(pts1[best_inliers], pts2[best_inliers])
         errors = compute_geometric_error(pts1, pts2, best_F)
         best_inliers = np.where(errors < threshold)[0]
 
@@ -359,68 +452,43 @@ def eight_points_ransac(
         print(
             f"RANSAC only found {len(best_inliers)} inliers, falling back and using all points to estimate F."
         )
-        best_F = eight_points_algo(pts1, pts2, normalized=normalize_points)
+        best_F = eight_points_algo(pts1, pts2)
         best_inliers = np.arange(num_points)
 
     return best_F, best_inliers
 
-def is_degenerate_configuration(pts1, pts2, min_distance=1e-3):
 
-    # Check if points are too close to each other
-    for i in range(len(pts1)):
-        for j in range(i + 1, len(pts1)):
-            if (
-                np.linalg.norm(pts1[i, :2] - pts1[j, :2]) < min_distance
-                or np.linalg.norm(pts2[i, :2] - pts2[j, :2]) < min_distance
-            ):
-                return True
+def main(img1: np.ndarray, img2: np.ndarray, config: dict) -> tuple:
+    """
+    Main function for fundamental matrix estimation and visualization.
 
-    # Check if points are collinear in either image (requires at least 3 points)
-    if len(pts1) >= 3:
-        # Convert to homogeneous if needed
-        if pts1.shape[1] == 2:
-            pts1_hom = np.hstack((pts1, np.ones((pts1.shape[0], 1))))
-            pts2_hom = np.hstack((pts2, np.ones((pts2.shape[0], 1))))
-        else:
-            pts1_hom = pts1.copy()
-            pts2_hom = pts2.copy()
+    Args:
+        img1 (np.ndarray): First image.
+        img2 (np.ndarray): Second image.
+        config (dict): Configuration dictionary with parameters for the algorithm.
 
-        # Check for collinearity in first image
-        for i in range(len(pts1_hom) - 2):
-            for j in range(i + 1, len(pts1_hom) - 1):
-                for k in range(j + 1, len(pts1_hom)):
-                    # Calculate cross product of vectors from i to j and i to k
-                    cross = np.cross(
-                        pts1_hom[j, :2] - pts1_hom[i, :2],
-                        pts1_hom[k, :2] - pts1_hom[i, :2],
-                    )
-                    if abs(cross) < min_distance:
-                        return True
+    Returns:
+        tuple: (F, pts1, pts2, match_img) where F is the fundamental matrix,
+               pts1 and pts2 are the point correspondences used (possibly filtered
+               by RANSAC), and match_img is an image showing correspondences.
 
-        # Check for collinearity in second image
-        for i in range(len(pts2_hom) - 2):
-            for j in range(i + 1, len(pts2_hom) - 1):
-                for k in range(j + 1, len(pts2_hom)):
-                    cross = np.cross(
-                        pts2_hom[j, :2] - pts2_hom[i, :2],
-                        pts2_hom[k, :2] - pts2_hom[i, :2],
-                    )
-                    if abs(cross) < min_distance:
-                        return True
-
-    return False
-
-def main(img1, img2, config):
-        
+    Raises:
+        SystemExit: If correspondences file cannot be found.
+    """
     # Check existence of correspondences.txt
-    correspondences_path=f"./correspondences_{config["img"]}.txt"
+    correspondences_path = f"./correspondences_{config['img']}.txt"
     if not os.path.exists(correspondences_path):
-        print("Cannot find correspondences path {correspondences_path}. Please, rename accordingly.")
+        print(
+            f"Cannot find correspondences path {correspondences_path}. Please, rename accordingly."
+        )
         sys.exit()
-    
-    # Parse
+
+    # Parse correspondences file and limit to specified number
     pts1, pts2 = get_annotated_correspondences(correspondences_path)
-    pts1, pts2 = pts1[:config["n_correspondences"], :], pts2[:config["n_correspondences"], :]
+    pts1, pts2 = (
+        pts1[: config["n_correspondences"], :],
+        pts2[: config["n_correspondences"], :],
+    )
 
     # Plot the correspondences
     match_img = plot_correspondences(img1, img2, pts1, pts2)
@@ -430,8 +498,8 @@ def main(img1, img2, config):
         F, inliers = eight_points_ransac(
             pts1,
             pts2,
-            threshold= config["ransac_threshold"],
-            iterations = config["ransac_iterations"],
+            threshold=config["ransac_threshold"],
+            iterations=config["ransac_iterations"],
         )
 
         # Keep only inlier points for subsequent operations
@@ -445,29 +513,35 @@ def main(img1, img2, config):
 
     # Standard (non-robust) estimation
     else:
-        F = eight_points_algo(pts1, pts2, normalized=config["normalize"])
+        F = eight_points_algo(pts1, pts2)
 
         return F, pts1, pts2, match_img
 
 
 if __name__ == "__main__":
+    """
+    Main entry point of the script for epipolar geometry estimation.
     
+    This loads configuration from a JSON file, runs the estimation algorithm,
+    computes errors, and generates visualizations.
+    """
     # --------------------- PLOTTING -------------------
     # Load config
     with open("config.json", "r") as f:
         config = json.load(f)
 
-    # Reproducibility
+    # Set random seed for reproducibility if specified
     if config["seed"]:
         np.random.seed(config["seed"])
         cv2.setRNGSeed(config["seed"])
-    
+
     # Get images
     img1, img2 = get_images(config)
 
     # --------------- 8 POINTS ALGO ----------------
+    # Run the fundamental matrix estimation
     F, pts1, pts2, match_img = main(
-        img1, 
+        img1,
         img2,
         config,
     )
@@ -476,15 +550,15 @@ if __name__ == "__main__":
     # Compute errors for each point (distance to epipolar line)
     errors = compute_geometric_error(pts1, pts2, F)
 
-    # Get stats
+    # Print error statistics
     print(f"Mean geometric error: {np.mean(errors):}")
     print(f"Max geometric error: {np.max(errors):}")
-    
+
     # --------------------- PLOTTING -------------------
-    
+    # Generate output filename postfix based on configuration
     postfix = generate_postfix(config)
 
-    # Epipolar Lines
+    # Save visualization of epipolar lines
     fig = draw_epipolar_lines(
         img1,
         img2,
@@ -494,7 +568,7 @@ if __name__ == "__main__":
     )
     fig.savefig(f"./save/epipolar_{postfix}.png")
 
-    # Correspondences
+    # Save visualization of point correspondences
     plt.figure(figsize=(10, 5))
     plt.imshow(match_img)
     plt.axis("off")
