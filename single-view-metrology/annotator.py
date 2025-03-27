@@ -1,237 +1,292 @@
+#!/usr/bin/env python3
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Button
+import argparse
 import os
+import sys
 
-class SimpleMetrologyAnnotator:
-    def __init__(self, image_path, output_file='annotations_new.txt'):
-        """Initialize with an image path and output file"""
-        self.img = cv2.imread(image_path)
-        if self.img is None:
-            raise ValueError(f"Could not load image from {image_path}")
-        self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
-        
-        # Ensure the output directory exists
-        output_dir = os.path.dirname(output_file)
-        if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
-        self.annotations_filename = output_file
-        
-        # Store points and lines
-        self.points = []
-        self.lines = []
-        self.current_line = []
-        
-        # Keep track of point types and line counters
-        self.point_types = []  # 'parallel_1', 'parallel_2', 'dave', 'jack'
-        self.current_type = 'parallel_1'
-        self.line_counters = {
-            'parallel_1': 0,
-            'parallel_2': 0,
-            'dave': 0,
-            'jack': 0
-        }
-        
-        # Colors for different point types
-        self.colors = {
-            'parallel_1': 'red',
-            'parallel_2': 'green',
-            'dave': 'blue',
-            'jack': 'purple'
-        }
-        
-        # Setup the figure
-        self.fig, self.ax = plt.subplots(figsize=(12, 10))
-        plt.subplots_adjust(bottom=0.15)
-        self.ax.imshow(self.img)
-        self.ax.set_title(f"Annotation Mode: {self.current_type}")
-        
-        # Add buttons
-        self.add_buttons()
-        
-        # Status message
-        self.status_text = self.ax.text(
-            0.5, 0.01, "Click to add points", 
-            transform=self.fig.transFigure,
-            horizontalalignment='center',
-            color='black', fontsize=12
+def parse_arguments():
+    """
+    Parse and validate command line arguments.
+    Returns:
+    tuple: (image_path, annotations_path, save_path, reference_length)
+    Exits with error message if arguments are incorrect.
+    """
+    if len(sys.argv) != 5:
+        print(
+            "\nUSAGE:\n\tpython3 main.py path/to/input_image.jpeg path/to/annotations.txt path/to/output_image.jpeg <reference_length_in_cm>"
         )
+        print(
+            "\nEXAMPLE:\n\tpython3 main.py img/img2.jpeg annotations/annotations_img2.txt output_img2.png 175\n"
+        )
+        sys.exit(1)
+    return sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
+
+class CorrespondenceAnnotator:
+    def __init__(self, image1_path, image2_path, output_path):
+        # Load images
+        self.img1 = cv2.imread(image1_path)
+        self.img2 = cv2.imread(image2_path)
         
-        # Connect to mouse events
-        self.cid_click = self.fig.canvas.mpl_connect('button_press_event', self.on_click)
-        self.cid_key = self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
-    
-    def add_buttons(self):
-        """Add UI buttons"""
-        # Type selection buttons
-        ax_parallel_1 = plt.axes([0.05, 0.05, 0.15, 0.05])
-        self.btn_parallel_1 = Button(ax_parallel_1, 'Parallel Set 1')
-        self.btn_parallel_1.on_clicked(lambda event: self.set_type('parallel_1'))
-        
-        ax_parallel_2 = plt.axes([0.25, 0.05, 0.15, 0.05])
-        self.btn_parallel_2 = Button(ax_parallel_2, 'Parallel Set 2')
-        self.btn_parallel_2.on_clicked(lambda event: self.set_type('parallel_2'))
-        
-        ax_dave = plt.axes([0.45, 0.05, 0.15, 0.05])
-        self.btn_dave = Button(ax_dave, 'Dave')
-        self.btn_dave.on_clicked(lambda event: self.set_type('dave'))
-        
-        ax_jack = plt.axes([0.65, 0.05, 0.15, 0.05])
-        self.btn_jack = Button(ax_jack, 'Jack')
-        self.btn_jack.on_clicked(lambda event: self.set_type('jack'))
-        
-        # Save button
-        ax_save = plt.axes([0.85, 0.05, 0.1, 0.05])
-        self.btn_save = Button(ax_save, 'Save')
-        self.btn_save.on_clicked(self.save_annotations)
-    
-    def set_type(self, point_type):
-        """Set the current point type"""
-        self.current_type = point_type
-        self.ax.set_title(f"Annotation Mode: {self.current_type}")
-        self.status_text.set_text(f"Mode: {self.current_type}. Click to add points.")
-        self.fig.canvas.draw_idle()
-    
-    def on_click(self, event):
-        """Handle mouse clicks"""
-        if event.inaxes != self.ax:
-            return
-        
-        x, y = int(round(event.xdata)), int(round(event.ydata))
-        
-        # Add point to the list
-        self.points.append((x, y))
-        self.point_types.append(self.current_type)
-        
-        # Plot the point
-        self.ax.plot(x, y, 'o', color=self.colors[self.current_type], markersize=8)
-        
-        # Add label
-        point_num = len(self.points) - 1
-        self.ax.text(x + 10, y + 10, f"{point_num}", 
-                   fontsize=12, color=self.colors[self.current_type])
-        
-        # Add to current line
-        self.current_line.append((x, y, point_num))
-        
-        # If we have 2 points for a line type, we have a complete line
-        # Dave and Jack are special types where each has top and bottom points
-        if len(self.current_line) == 2:
-            x1, y1, p1_idx = self.current_line[0]
-            x2, y2, p2_idx = self.current_line[1]
+        if self.img1 is None or self.img2 is None:
+            raise ValueError("Could not load one or both images")
             
-            # Draw the line
-            self.ax.plot([x1, x2], [y1, y2], '-', color=self.colors[self.current_type], linewidth=2)
-            
-            # Increment line counter for this type
-            self.line_counters[self.current_type] += 1
-            line_num = self.line_counters[self.current_type]
-            
-            # Save the line with its number and type
-            self.lines.append({
-                'type': self.current_type,
-                'line_num': line_num,
-                'point1': (x1, y1, p1_idx),
-                'point2': (x2, y2, p2_idx)
-            })
-            
-            # Reset current line
-            self.current_line = []
+        # Store original images for display
+        self.original_img1 = self.img1.copy()
+        self.original_img2 = self.img2.copy()
         
-        self.fig.canvas.draw_idle()
-    
-    def on_key_press(self, event):
-        """Handle key presses"""
-        if event.key == 'escape':
-            # Cancel current line if escape is pressed
-            self.current_line = []
-            self.status_text.set_text("Current line canceled. Click to start a new line.")
-            self.fig.canvas.draw_idle()
-        elif event.key == 'q':
-            plt.close(self.fig)
-    
-    def save_annotations(self, event):
-        """Save annotations to file in the specified format"""
-        # Sort lines by type and line number
-        parallel1_lines = [line for line in self.lines if line['type'] == 'parallel_1']
-        parallel2_lines = [line for line in self.lines if line['type'] == 'parallel_2']
-        dave_points = [line for line in self.lines if line['type'] == 'dave']
-        jack_points = [line for line in self.lines if line['type'] == 'jack']
+        # Resize if images are too large
+        self.resize_images()
         
-        # Write to file in the requested format
-        with open(self.annotations_filename, 'w') as f:
-            # Parallel Set 1
-            f.write("# Parallel Set 1 (left vanishing point)\n")
-            for i, line in enumerate(parallel1_lines, 1):
-                f.write(f"# Line {i}\n")
-                f.write(f"{line['point1'][0]},{line['point1'][1]}        # {i}_1\n")
-                f.write(f"{line['point2'][0]},{line['point2'][1]}         # {i}_2\n")
+        # Output file path
+        self.output_path = output_path
+        
+        # Store point correspondences
+        self.points1 = []
+        self.points2 = []
+        
+        # Keep track of which image we're selecting points from
+        self.selecting_img1 = True
+        
+        # Current temporary point (for display purposes)
+        self.temp_point = None
+        
+        # Window name
+        self.window_name = "Image Correspondence Annotator"
+        
+        # Colors for markers
+        self.colors = [
+            (0, 0, 255),    # Red
+            (0, 255, 0),    # Green
+            (255, 0, 0),    # Blue
+            (0, 255, 255),  # Yellow
+            (255, 0, 255),  # Magenta
+            (255, 255, 0),  # Cyan
+        ]
+        
+    def resize_images(self):
+        """Resize images if they're too large for display"""
+        max_height = 2000
+        max_width = 2000
+        
+        h1, w1 = self.img1.shape[:2]
+        h2, w2 = self.img2.shape[:2]
+        
+        # Resize image 1 if needed
+        if h1 > max_height or w1 > max_width:
+            scale = min(max_height / h1, max_width / w1)
+            self.img1 = cv2.resize(self.img1, None, fx=scale, fy=scale)
             
-            # Parallel Set 2
-            f.write("# Parallel Set 2 (right vanishing point)\n")
-            for i, line in enumerate(parallel2_lines, len(parallel1_lines) + 1):
-                f.write(f"# Line {i}\n")
-                f.write(f"{line['point1'][0]},{line['point1'][1]}         # {i}_1\n")
-                point2_str = f"{line['point2'][0]},{line['point2'][1]}"
-                
-                # Check if this point is shared with any other line
-                shared_points = []
-                for other_line in self.lines:
-                    if other_line != line:
-                        if (line['point2'][0], line['point2'][1]) == (other_line['point1'][0], other_line['point1'][1]):
-                            shared_points.append(f"{other_line['line_num']}_1")
-                        elif (line['point2'][0], line['point2'][1]) == (other_line['point2'][0], other_line['point2'][1]):
-                            shared_points.append(f"{other_line['line_num']}_2")
-                
-                if shared_points:
-                    point2_str += f"         # {i}_2 (note: same as {shared_points[0]})"
+        # Resize image 2 if needed
+        if h2 > max_height or w2 > max_width:
+            scale = min(max_height / h2, max_width / w2)
+            self.img2 = cv2.resize(self.img2, None, fx=scale, fy=scale)
+            
+        # Store resize scales for saving original coordinates
+        self.scale1 = self.original_img1.shape[1] / self.img1.shape[1]
+        self.scale2 = self.original_img2.shape[1] / self.img2.shape[1]
+            
+        # Get dimensions after resize
+        self.h1, self.w1 = self.img1.shape[:2]
+        self.h2, self.w2 = self.img2.shape[:2]
+        
+        # Height of the combined display (max of two images)
+        self.display_height = max(self.h1, self.h2)
+        
+        # Width of the combined display
+        self.display_width = self.w1 + self.w2 + 20  # 20px separator
+        
+    def create_display_image(self):
+        """Create the combined display image with annotations"""
+        # Create blank canvas
+        display = np.zeros((self.display_height, self.display_width, 3), dtype=np.uint8)
+        
+        # Place first image on the left
+        display[0:self.h1, 0:self.w1] = self.img1
+        
+        # Place second image on the right
+        display[0:self.h2, self.w1+20:self.w1+20+self.w2] = self.img2
+        
+        # Draw gray separator
+        cv2.line(display, (self.w1+10, 0), (self.w1+10, self.display_height), (100, 100, 100), 1)
+        
+        # Draw all point pairs (with matching colors)
+        for i, (p1, p2) in enumerate(zip(self.points1, self.points2)):
+            color = self.colors[i % len(self.colors)]
+            # Draw point on first image (1 pixel for precision)
+            cv2.circle(display, p1, 1, color, -1)
+            cv2.putText(display, str(i+1), (p1[0]+5, p1[1]-5), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+            
+            # Draw point on second image (1 pixel for precision)
+            adjusted_p2 = (p2[0] + self.w1 + 20, p2[1])
+            cv2.circle(display, adjusted_p2, 1, color, -1)
+            cv2.putText(display, str(i+1), (adjusted_p2[0]+5, adjusted_p2[1]-5), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+            
+            # Draw line connecting points
+            cv2.line(display, p1, adjusted_p2, color, 1)
+            
+        # Draw temporary point if it exists (1 pixel for precision)
+        if self.temp_point is not None:
+            if self.selecting_img1:
+                cv2.circle(display, self.temp_point, 1, (255, 255, 255), -1)
+            else:
+                adjusted_temp = (self.temp_point[0] + self.w1 + 20, self.temp_point[1])
+                cv2.circle(display, adjusted_temp, 1, (255, 255, 255), -1)
+        
+        # Add instructions
+        cv2.putText(display, "ESC: Quit, S: Save, D: Delete last, R: Reset", 
+                   (10, self.display_height - 10), cv2.FONT_HERSHEY_SIMPLEX, 
+                   0.5, (255, 255, 255), 1)
+                   
+        if self.selecting_img1:
+            cv2.putText(display, "Selecting point in LEFT image", 
+                       (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+        else:
+            cv2.putText(display, "Selecting point in RIGHT image", 
+                       (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+        
+        return display
+        
+    def mouse_callback(self, event, x, y, flags, param):
+        """Handle mouse events"""
+        if event == cv2.EVENT_MOUSEMOVE:
+            # Update temporary point location based on which image the mouse is over
+            if 0 <= x < self.w1:  # First image
+                if self.selecting_img1:
+                    self.temp_point = (x, y)
                 else:
-                    point2_str += f"         # {i}_2"
+                    self.temp_point = None
+            elif self.w1+20 <= x < self.display_width:  # Second image
+                if not self.selecting_img1:
+                    self.temp_point = (x - (self.w1+20), y)
+                else:
+                    self.temp_point = None
+            else:
+                self.temp_point = None
+            
+        elif event == cv2.EVENT_LBUTTONDOWN:
+            # Handle left click for point selection
+            if self.selecting_img1 and 0 <= x < self.w1:
+                # Selected point in first image
+                self.points1.append((x, y))
+                self.selecting_img1 = False
+                print(f"Selected point in image 1: ({x}, {y})")
                 
-                f.write(point2_str + "\n")
-            
-            # Dave
-            if dave_points:
-                f.write("# Dave\n")
-                for line in dave_points:
-                    f.write(f"{line['point1'][0]},{line['point1'][1]}         # top\n")
-                    f.write(f"{line['point2'][0]},{line['point2'][1]}         # bottom\n")
-            
-            # Jack
-            if jack_points:
-                f.write("# Jack\n")
-                for line in jack_points:
-                    f.write(f"{line['point1'][0]},{line['point1'][1]}         # top\n")
-                    f.write(f"{line['point2'][0]},{line['point2'][1]}         # bottom\n")
+            elif not self.selecting_img1 and self.w1+20 <= x < self.display_width:
+                # Selected point in second image
+                adjusted_x = x - (self.w1+20)
+                self.points2.append((adjusted_x, y))
+                self.selecting_img1 = True
+                print(f"Selected point in image 2: ({adjusted_x}, {y})")
+                print(f"Pair {len(self.points1)} added successfully")
+                
+        self.update_display()
+                
+    def update_display(self):
+        """Update the display window"""
+        display = self.create_display_image()
+        cv2.imshow(self.window_name, display)
         
-        self.status_text.set_text(f"Annotations saved to {self.annotations_filename}")
-        self.fig.canvas.draw_idle()
-        print(f"Annotations saved to {self.annotations_filename}")
-    
+    def save_correspondences(self):
+        """Save point correspondences to a text file"""
+        with open(self.output_path, 'w') as f:
+            f.write("# Point correspondences between two images\n")
+            f.write("# Format: x1 y1 x2 y2\n")
+            f.write(f"# Total pairs: {len(self.points1)}\n")
+            
+            for i, (p1, p2) in enumerate(zip(self.points1, self.points2)):
+                # Convert back to original image coordinates
+                orig_x1 = int(p1[0] * self.scale1)
+                orig_y1 = int(p1[1] * self.scale1)
+                orig_x2 = int(p2[0] * self.scale2)
+                orig_y2 = int(p2[1] * self.scale2)
+                
+                f.write(f"{orig_x1} {orig_y1} {orig_x2} {orig_y2}\n")
+                
+        print(f"Saved {len(self.points1)} point pairs to {self.output_path}")
+        
+    def delete_last_pair(self):
+        """Delete the last point pair"""
+        if self.points1 and not self.selecting_img1:
+            # If we're selecting the second point, remove the first point
+            self.points1.pop()
+            self.selecting_img1 = True
+            print("Removed last point from image 1")
+        elif self.points1 and self.points2 and self.selecting_img1:
+            # If we're selecting the first point, remove the last pair
+            self.points1.pop()
+            self.points2.pop()
+            print("Removed last point pair")
+        self.update_display()
+        
+    def reset(self):
+        """Reset all point selections"""
+        self.points1 = []
+        self.points2 = []
+        self.selecting_img1 = True
+        print("Reset all points")
+        self.update_display()
+        
     def run(self):
         """Run the annotation tool"""
-        plt.show()
+        # Create window and set mouse callback
+        cv2.namedWindow(self.window_name)
+        cv2.setMouseCallback(self.window_name, self.mouse_callback)
         
-        return {
-            'points': self.points,
-            'point_types': self.point_types,
-            'lines': self.lines
-        }
+        # Initial display
+        self.update_display()
+        
+        print("\nImage Correspondence Annotator")
+        print("------------------------------")
+        print("Instructions:")
+        print("  - Click to select corresponding points in the two images")
+        print("  - Press 'S' to save correspondences to file")
+        print("  - Press 'D' to delete the last point pair")
+        print("  - Press 'R' to reset all points")
+        print("  - Press 'ESC' to quit\n")
+        
+        while True:
+            key = cv2.waitKey(1) & 0xFF
+            
+            if key == 27:  # ESC key
+                break
+            elif key == ord('s'):  # Save
+                if len(self.points1) == len(self.points2) and len(self.points1) > 0:
+                    self.save_correspondences()
+                else:
+                    print("Nothing to save or incomplete pair")
+            elif key == ord('d'):  # Delete last
+                self.delete_last_pair()
+            elif key == ord('r'):  # Reset
+                self.reset()
+                
+        cv2.destroyAllWindows()
 
 def main():
-    import argparse
-    parser = argparse.ArgumentParser(description='Simple Metrology Annotation Tool')
-    parser.add_argument('image_path', help='Path to the image file')
-    parser.add_argument('output_file', nargs='?', default='annotations/annotations_new.txt', 
-                      help='Output file for annotations (default: annotations/annotations_new.txt)')
+    parser = argparse.ArgumentParser(description='Annotate corresponding points in two images')
+    parser.add_argument('image1', help='Path to first image')
+    parser.add_argument('image2', help='Path to second image')
+    parser.add_argument('--output', '-o', default='correspondences.txt', 
+                        help='Output file path (default: correspondences.txt)')
+    
     args = parser.parse_args()
     
-    annotator = SimpleMetrologyAnnotator(args.image_path, args.output_file)
-    annotations = annotator.run()
-    
-    print("Annotation complete!")
-    return annotations
+    # Check if images exist
+    if not os.path.exists(args.image1):
+        print(f"Error: Image file not found: {args.image1}")
+        return
+    if not os.path.exists(args.image2):
+        print(f"Error: Image file not found: {args.image2}")
+        return
+        
+    # Create and run the annotator
+    try:
+        annotator = CorrespondenceAnnotator(args.image1, args.image2, args.output)
+        annotator.run()
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
-    annotations = main()
+    main()
