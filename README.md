@@ -61,16 +61,16 @@ With RANSAC (N=1000, ε=0.2), we achieved:
 
 ```
 ├── single_view_metrology/
-│   ├── annotations           # .txt files containing the annotations
-│   ├── img                   # Source images used to test the algorithm
-│   ├── outputs               # Results on the source images
-│   ├── plots                 # Intermediate plots
+│   ├── annotations/          # .txt files containing the annotations
+│   ├── img/                  # Source images used to test the algorithm
+│   ├── outputs/              # Results on the source images
+│   ├── plots/                # Intermediate plots
 │   ├── annotator_SVM.py      # Custom annotation tool
 │   └── main_SVM.py           # Single View Metrology implementation
 ├── eight_point_algorithm/
-│   ├── annotations           # .txt files containing the annotations
-│   ├── img                   # Source images used to test the algorithm
-│   ├── outputs               # Results on the source images
+│   ├── annotations/          # .txt files containing the annotations
+│   ├── img/                  # Source images used to test the algorithm
+│   ├── outputs/              # Results on the source images
 │   ├── annotator_EPA.py      # Custom annotation tool
 │   ├── config.json           # Configuration file to specify hyper-parameters
 │   └── main_EPA.py           # Eight Point Algorithm implementation
