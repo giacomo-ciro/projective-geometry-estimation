@@ -1,25 +1,19 @@
 # Computer Vision: Single View Metrology & Eight-Point Algorithm
 
 This repository contains the implementation of two fundamental computer vision techniques:
-1. Single View Metrology for height estimation from a single image
-2. The Eight-Point Algorithm for fundamental matrix estimation from two views
+1. **Single View Metrology** for height estimation from a single image
+2. The **Eight-Point Algorithm** for fundamental matrix estimation from two views
 
-This work was developed as part of the Computer Vision and Image Processing course (20878) at Bocconi University's MSc in Artificial Intelligence program.
+This work was developed as part of the *Computer Vision and Image Processing* course (20878) at *Bocconi University*'s *MSc in Artificial Intelligence* program by:
+- [Alessandro Bellini](https://github.com/alefrabel)
+- [Davide Beltrame](https://github.com/davide-beltrame)
+- [Giacomo Cirò](https://www.github.com/giacomo-ciro)
 
-## Team
-
-"Rectory" Group:
-- Alessandro Bellini
-- Davide Beltrame
-- Giacomo Cirò
-
-## Project Overview
-
-### Single View Metrology
+## Single View Metrology
 
 We implemented a method to estimate a person's height from a single image using projective geometry. Our approach leverages the mathematical properties of parallel lines in a scene to compute vanishing points and the horizon line.
 
-#### Methodology
+### Methodology
 
 1. Annotate an image with:
    - Two pairs of parallel lines
@@ -33,17 +27,17 @@ We implemented a method to estimate a person's height from a single image using 
 
 3. Calculate the unknown height using proportional relationships
 
-#### Results
+### Results
 
 Our implementation achieved high precision on test images, estimating a 184 cm person's height as 184.10 cm using a 175 cm reference.
 
 ![Single View Metrology Results](single-view-metrology/img/final.png)
 
-### Eight-Point Algorithm
+## Eight-Point Algorithm
 
 We implemented the eight-point algorithm to estimate the fundamental matrix from point correspondences between two views of the same scene, allowing us to compute epipolar geometry.
 
-#### Methodology
+### Methodology
 
 1. Manual annotation of 30 point correspondences between two images
 2. Hartley normalization for improved numerical stability
@@ -53,7 +47,7 @@ We implemented the eight-point algorithm to estimate the fundamental matrix from
    - Solving via SVD and enforcing the rank-2 constraint
 4. RANSAC framework for robust estimation
 
-#### Results
+### Results
 
 With RANSAC (N=1000, ε=0.2), we achieved:
 - Mean geometric error: 0.058 pixels
@@ -62,29 +56,25 @@ With RANSAC (N=1000, ε=0.2), we achieved:
 
 ![Epipolar Lines](eight-point-algorithm/outputs/epipolar_giratina_occhiali_ransac.png) *The estimated epipolar lines in the two views of the image
 
-## Implementation
-
-- **Language**: Python
-- **Libraries**: NumPy, PIL, OpenCV, Matplotlib
-- **Custom tools**: Point annotators for precise manual annotation
 
 ## Repository Structure
 
 ```
 ├── single_view_metrology/
 │   ├── annotations           # .txt files containing the annotations
-│   ├── annotations           # .txt files containing the annotations
-│   ├── annotator.py          # Custom annotation tool
-│   ├── svm.py                # Single View Metrology implementation
-│   └── README.md             # Specific instructions
+│   ├── img                   # Source images used to test the algorithm
+│   ├── outputs               # Results on the source images
+│   ├── plots                 # Intermediate plots
+│   ├── annotator_SVM.py      # Custom annotation tool
+│   └── main_SVM.py           # Single View Metrology implementation
 ├── eight_point_algorithm/
-│   ├── annotator.py          # Point correspondence annotation tool
-│   ├── eight_point.py        # Eight-point algorithm implementation
-│   ├── ransac.py             # RANSAC framework implementation
-│   └── README.md             # Specific instructions
-├── img/                      # Images used in the experiments
-├── notebooks/                # Jupyter notebooks with examples
-└── README.md                 # This file
+│   ├── annotations           # .txt files containing the annotations
+│   ├── img                   # Source images used to test the algorithm
+│   ├── outputs               # Results on the source images
+│   ├── annotator_EPA.py      # Custom annotation tool
+│   ├── config.json           # Configuration file to specify hyper-parameters
+│   └── main_EPA.py           # Eight Point Algorithm implementation
+└── report.pdf                # Final report illustrating our methodology
 ```
 
 ## Usage
