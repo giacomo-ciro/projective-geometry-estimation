@@ -1,5 +1,4 @@
-# Single View Metrology & Eight-Point Algorithm
-## Computer Vision and Image Processing
+# Projective Geometry Estimation
 
 This repository contains the implementation of two fundamental computer vision techniques:
 1. **Single View Metrology** for height estimation from a single image
