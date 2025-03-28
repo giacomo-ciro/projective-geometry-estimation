@@ -55,8 +55,13 @@ With RANSAC (N=1000, ε=0.2), we achieved:
 - 47% inlier ratio (14 of 30 points)
 - Successful epipolar line visualization
 
-![Epipolar Lines](eight-point-algorithm/outputs/epipolar_giratina_occhiali_ransac.png) *The estimated epipolar lines in the two views of the image.*
+![Epipolar Lines](eight-point-algorithm/outputs/epipolar_giratina_occhiali_ransac.png) *The estimated epipolar lines in the two views of the image
 
+## Implementation
+
+- **Language**: Python
+- **Libraries**: NumPy, PIL, OpenCV, Matplotlib
+- **Custom tools**: Point annotators for precise manual annotation
 
 ## Repository Structure
 
