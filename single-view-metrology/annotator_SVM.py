@@ -1,9 +1,9 @@
-#!/usr/bin/env python3
 import cv2
 import numpy as np
 import argparse
 import os
 import sys
+
 
 def parse_arguments():
     """
@@ -21,6 +21,7 @@ def parse_arguments():
         )
         sys.exit(1)
     return sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
+
 
 class CorrespondenceAnnotator:
     def __init__(self, image1_path, image2_path, output_path):
@@ -264,6 +265,7 @@ class CorrespondenceAnnotator:
                 
         cv2.destroyAllWindows()
 
+
 def main():
     parser = argparse.ArgumentParser(description='Annotate corresponding points in two images')
     parser.add_argument('image1', help='Path to first image')
@@ -287,6 +289,7 @@ def main():
         annotator.run()
     except Exception as e:
         print(f"Error: {e}")
+
 
 if __name__ == "__main__":
     main()

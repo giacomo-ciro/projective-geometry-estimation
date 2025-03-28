@@ -1,9 +1,9 @@
 import re
 import sys
-
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+
 
 def parse_arguments():
     """

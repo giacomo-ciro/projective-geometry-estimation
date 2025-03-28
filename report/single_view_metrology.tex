@@ -1,0 +1,113 @@
+\section{Single View Metrology (Height Estimation)}
+
+\paragraph{Introduction} We consider an image of two people standing on the same ground plane (Figure \ref{fig:annotated_points}), annotated\footnote{We developed an ad-hoc annotator file to obtain pixel-precise manual point coordinates.} with:
+
+\begin{itemize}
+    \item Two pairs of parallel lines in the scene.
+    \item Two points identifying a segment of known length, i.e. the reference height. 
+    \item Two points identifying a segment of unknown length, i.e. the height to be estimated.
+\end{itemize}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{img/annotated_points.png}
+        \vspace{-5pt}  % Adjust this value as needed
+        \caption{In blue and red, the points identifying the two pairs of parallel lines. In yellow, the points representing the height to be estimated (Jack's). In purple, the points representing the reference height (Dave's). In the image, we use the 0-based notation (i.e., points $0,1$ and $0,2$ in denote the extremes of parallel line $l_1$}.
+        \label{fig:annotated_points}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{img/retrieved_lines.png}
+        \vspace{-5pt}  % Adjust this value as needed
+        \caption{In blue and red, the lines retrieved using the annotated points and the cross-product property. In yellow and purple, the segment representing the height of the person. The purple segment's length is known, the yellow segment's length is the one we estimate.}
+        \label{fig:retrieved_lines}
+    \end{minipage}
+\end{figure}
+
+\paragraph{Notation} In this section, we use the following notation:
+
+\begin{itemize}
+    \item \textit{Person 1} (Dave): the person whose height is known and we use as reference.
+    \item \textit{Person 2} (Jack): the person whose height is unknown and we want to estimate.
+    \item $h_i$, $f_i$: the points identifying Person $i$'s height, for $i=1,2$.
+    \item $p_{j,1}$, $p_{j,2}$: the points identifying the $j$-th parallel line annotated in the scene, for $j=1,2,3,4$.
+\end{itemize}
+
+\paragraph{Background} Our methodology heavily relies on a key property of projective geometry, which involves homogeneous coordinates and the cross product. Let $x,y,v,w \in\mathbb{P}^2$ be four points in the projective plane and let $\times$ denote the cross product in $\mathbb{R}^3$. Then the following holds:
+
+\begin{itemize}
+    \item $x \times y$ are the homogeneous coordinates in the dual projective plane of the line passing through $x$ and $y$. 
+    \item $(x \times y) \times (v \times w)$ are the homogeneous coordinates in the projective plane of the intersection of the line passing through $x$ and $y$ with the line passing through $v$ and $w$.
+\end{itemize}
+
+\paragraph{Methodology} To estimate the height, we use the annotations to identify the pairs of parallel lines and their intersection points. We compute the horizon as the line passing through these intersections. We find the intersection of the line through the feet of the two people with the horizon. From this point, we draw a line to project the height of one person onto the other. Finally, we measure their ratio in the image reference system and use a proportion to retrieve the original height. More in details:
+
+\begin{enumerate}
+    
+    \item Extend the 2D coordinates of the points in the image reference system by setting the third coordinate to $1$ to get the homogeneous coordinates and identify the parallel lines (Figure \ref{fig:retrieved_lines}):
+    \begin{align*}
+        l_{parallel_j} &= p_{j,1} \times p_{j,2} \quad \text{for }j=1,2,3,4
+    \end{align*}
+
+    \item Identify the vanishing points and the horizon (Figure \ref{fig:wide}):
+    \begin{align*}
+        v_{left} &= l_{parallel_1} \times l_{parallel_2}\\
+        v_{right} &= l_{parallel_3} \times l_{parallel_4}\\
+        l_{\infty} &= v_{left} \times v_{right}
+    \end{align*}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{img/wide.png}
+    \caption{In green, the retrieved horizon. The left and right vanishing points are represented by the intersection of the horizon with the red lines and blue lines respectively.}
+    \label{fig:wide}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.55\linewidth]{img/final.png}
+    \caption{The final result. The purple line (Person 1's height) is known to be 175 cm in reality. The yellow line (Person 2's height) is estimated to be 184.10 cm in reality (true is 184 cm). The dashed yellow line represents the projection of the yellow line onto the purple line.}
+    \label{fig:final}
+\end{figure}
+
+    \item Identify the line passing through the feet $f_1$ and $f_2$ of the two people (Figure \ref{fig:final}:):
+    \begin{align*}
+        l_{feet} = f_{1} \times f_{2}
+    \end{align*}
+    
+    \item Find the point at infinity where $l_{feet}$ intersects with the horizon (Figure \ref{fig:final}:):
+    \begin{align*}
+        p_{\infty} = l_{feet} \times l_{\infty}
+    \end{align*}
+
+    \vspace{5mm}
+
+    \item Project the Person 2's top point $t_2$ onto the line $l_1$ where Person 1's height segment lies (Figure \ref{fig:final}):
+    \begin{align*}
+        l_{1} &= t_1 \times f_1 \\
+        l_{heads} &= p_{\infty} \times t_2 \\
+        t_2^{\prime} &= l_{heads} \times l_{1}
+    \end{align*}
+
+    \item Normalize the projected point to get the coordinates in the image reference system:
+    \begin{align*}
+        t_2^{\prime} = \frac{t_2^{\prime}}{(t_2^{\prime})_3}
+    \end{align*}
+
+    \item Calculate the height ratio and estimate the true height $\hat{h}^*_2$ using the annotated height $h^*_1$ (Figure \ref{fig:final}:):
+    \begin{align*}
+        h_1 &= \|t_1 - f_1\| \\
+        h_2^{\prime} &= \|t_2^{\prime} - f_1\| \\
+        \hat{h}^*_2 &= \frac{t_2^{\prime} \cdot h^*_1}{t_1}
+    \end{align*}
+    
+\end{enumerate}
+
+\paragraph{Implementation} The algorithm is implemented in \textit{Python} using \textit{NumPy} for matrix operations and \textit{PIL} for image handling.
+
+\paragraph{Results} We test our approach on an image where the actual height of the second person was known to be 184 cm. Using a reference person with a height of 175 cm, our algorithm estimates the second person's height to be 184.10 cm.
+
+\paragraph{Discussion} On this particular image, the final result was extremely precise. However, we notice that this methodology is very sensitive to small shifts in the annotations, and on different test images it performs slightly worse. For example, we consider an image where the left vanishing point is extremely close to one person's top reference point, which greatly magnifies annotation errors and yields suboptimal results. Additionally, we notice that using two pairs of parallel lines as references in the scene such that two non-parallel lines intersect at an annotated point (Point $2,2$ in Figure \ref{fig:annotated_points}) significantly improves the estimation accuracy.  
