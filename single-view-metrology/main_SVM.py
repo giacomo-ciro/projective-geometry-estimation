@@ -16,10 +16,10 @@ def parse_arguments():
     """
     if len(sys.argv) != 5:
         print(
-            "\nUSAGE:\n\tpython3 main.py path/to/input_image.jpeg path/to/annotations.txt path/to/output_image.jpeg <reference_length_in_cm>"
+            "\nUSAGE:\n\tpython3 main_SVM.py path/to/input_image.jpeg path/to/annotations.txt path/to/output_image.jpeg <reference_length_in_cm>"
         )
         print(
-            "\nEXAMPLE:\n\tpython3 main.py img/img2.jpeg annotations/annotations_img2.txt output_img2.png 175\n"
+            "\nEXAMPLE:\n\tpython3 main_SVM.py img/img2.jpeg annotations/annotations_img2.txt outputs/output_img2.png 175\n"
         )
         sys.exit(1)
 
@@ -134,9 +134,7 @@ def calculate_height(obj, reference_length):
     return person_2_length_projected * reference_length / person_1_length
 
 
-def visualize_results(
-    img, obj, reference_length, estimated_height, true_length, save_path
-):
+def visualize_results(img, obj, reference_length, estimated_height, true_length, save_path):
     """
     Visualize the results by plotting geometric entities on the image.
 

@@ -475,7 +475,7 @@ def main(img1: np.ndarray, img2: np.ndarray, config: dict) -> tuple:
         SystemExit: If correspondences file cannot be found.
     """
     # Check existence of correspondences.txt
-    correspondences_path = f"./correspondences_{config['img']}.txt"
+    correspondences_path = f"./annotations/correspondences_{config['img']}.txt"
     if not os.path.exists(correspondences_path):
         print(
             f"Cannot find correspondences path {correspondences_path}. Please, rename accordingly."
@@ -531,7 +531,7 @@ def run_multiple_trials(config, num_trials=100):
     img1, img2 = get_images(config)
     
     # Get correspondences path
-    correspondences_path = f"./correspondences_{config['img']}.txt"
+    correspondences_path = f"./annotations/correspondences_{config['img']}.txt"
     if not os.path.exists(correspondences_path):
         print(f"Cannot find correspondences path {correspondences_path}. Please, rename accordingly.")
         sys.exit()
@@ -642,14 +642,14 @@ if __name__ == "__main__":
         pts2,
         F,
     )
-    fig.savefig(f"./save/epipolar_{postfix}.png")
+    fig.savefig(f"./outputs/epipolar_{postfix}.png")
 
     # Save visualization of point correspondences
     plt.figure(figsize=(10, 5))
     plt.imshow(match_img)
     plt.axis("off")
-    plt.savefig(f"./save/correspondeces_{postfix}.png")
+    plt.savefig(f"./outputs/correspondeces_{postfix}.png")
     
     # Optionally, save the statistics to a file
-    with open(f"./save/error_stats_{postfix}.json", "w") as f:
+    with open(f"./outputs/error_stats_{postfix}.json", "w") as f:
         json.dump({k: v for k, v in stats.items() if k != "raw_data"}, f, indent=4)

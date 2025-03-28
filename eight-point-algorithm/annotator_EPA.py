@@ -251,8 +251,8 @@ def main():
     parser = argparse.ArgumentParser(description='Annotate corresponding points in two images')
     parser.add_argument('image1', help='Path to first image')
     parser.add_argument('image2', help='Path to second image')
-    parser.add_argument('--output', '-o', default='correspondences.txt', 
-                        help='Output file path (default: correspondences.txt)')
+    parser.add_argument('--output', '-o', default='annotations/correspondences.txt', 
+                        help='Output file path (default: annotations/correspondences.txt)')
     
     args = parser.parse_args()
     
