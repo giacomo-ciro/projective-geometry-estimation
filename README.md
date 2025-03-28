@@ -1,4 +1,5 @@
-# Computer Vision: Single View Metrology & Eight-Point Algorithm
+# Single View Metrology & Eight-Point Algorithm
+## Computer Vision and Image Processing
 
 This repository contains the implementation of two fundamental computer vision techniques:
 1. **Single View Metrology** for height estimation from a single image
@@ -31,7 +32,7 @@ We implemented a method to estimate a person's height from a single image using 
 
 Our implementation achieved high precision on test images, estimating a 184 cm person's height as 184.10 cm using a 175 cm reference.
 
-![Single View Metrology Results](single-view-metrology/img/final.png)
+![Single View Metrology Results](single-view-metrology/outputs/final.png) *The final result. The purple line (Person 1’s height) is known to be 175 cm in reality. The yellow line (Person 2’s height) is estimated to be 184.10 cm (which in reality is 184 cm). The dashed yellow line represents the projection of the yellow line onto the purple line.*
 
 ## Eight-Point Algorithm
 
@@ -54,7 +55,7 @@ With RANSAC (N=1000, ε=0.2), we achieved:
 - 47% inlier ratio (14 of 30 points)
 - Successful epipolar line visualization
 
-![Epipolar Lines](eight-point-algorithm/outputs/epipolar_giratina_occhiali_ransac.png) *The estimated epipolar lines in the two views of the image
+![Epipolar Lines](eight-point-algorithm/outputs/epipolar_giratina_occhiali_ransac.png) *The estimated epipolar lines in the two views of the image.*
 
 
 ## Repository Structure
@@ -81,39 +82,23 @@ With RANSAC (N=1000, ε=0.2), we achieved:
 
 ### Single View Metrology
 
-```python
-from single_view_metrology import svm
+```bash
+cd single_view_metrology
 
-# Load annotated points
-reference_height = 175  # cm
-estimated_height = svm.estimate_height(
-    image_path, 
-    parallel_lines, 
-    reference_points, 
-    unknown_points, 
-    reference_height
-)
-print(f"Estimated height: {estimated_height:.2f} cm")
+python3 main_SVM.py img/input_image.jpeg annotations/annotations_input_image.txt outputs/output_image.jpeg <reference_length_in_cm>
+
+# Example
+cd single_view_metrology
+
+python3 main_SVM.py img/img2.jpeg annotations/annotations_img2.txt outputs/output_img2.jpeg 175
 ```
 
 ### Eight-Point Algorithm
 
-```python
-from eight_point_algorithm import eight_point
+```bash
+cd eight_point_algorithm
 
-# Load point correspondences
-points1, points2 = load_correspondences(image1_path, image2_path)
-
-# Estimate fundamental matrix
-F, inliers = eight_point.estimate_fundamental_matrix(
-    points1, 
-    points2, 
-    ransac_iterations=1000, 
-    inlier_threshold=0.2
-)
-
-# Visualize epipolar lines
-eight_point.visualize_epipolar_lines(image1, image2, F, points1, points2)
+python3 main_EPA.py
 ```
 
 ## References
